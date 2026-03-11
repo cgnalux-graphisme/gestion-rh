@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.accg-nalux.be)",
+      "Bash(bash \"C:/Users/cgnal/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.1/skills/brainstorming/scripts/start-server.sh\" --project-dir \"C:/Users/cgnal/Documents/.Applications/gestion_rh\")",
+      "mcp__23d98727-a8c7-49dc-8849-bafdf2ed019a__list_projects",
+      "mcp__2df1ae34-2ede-47d4-bab1-7cf248200c34__list_teams",
+      "Bash(gh repo list --limit 10 --json name,url)",
+      "mcp__23d98727-a8c7-49dc-8849-bafdf2ed019a__get_cost",
+      "mcp__23d98727-a8c7-49dc-8849-bafdf2ed019a__confirm_cost",
+      "mcp__23d98727-a8c7-49dc-8849-bafdf2ed019a__create_project",
+      "mcp__23d98727-a8c7-49dc-8849-bafdf2ed019a__pause_project",
+      "mcp__23d98727-a8c7-49dc-8849-bafdf2ed019a__get_project_url",
+      "mcp__23d98727-a8c7-49dc-8849-bafdf2ed019a__get_publishable_keys",
+      "Bash(npx create-next-app@14 . --typescript --tailwind --eslint --app --src-dir=false --import-alias=\"@/*\" --no-turbopack --yes)",
+      "Bash(npx create-next-app@14 _nextapp --typescript --tailwind --eslint --app --src-dir=false --import-alias=\"@/*\" --no-turbopack --yes)",
+      "Bash(npx create-next-app@14 nextapp-tmp --typescript --tailwind --eslint --app --src-dir=false --import-alias=\"@/*\" --no-turbopack --yes)",
+      "Bash(printf '\\\\n\\\\n\\\\n\\\\n\\\\n')",
+      "Bash(npx create-next-app@14 nextapp-tmp --typescript --tailwind --eslint --app --import-alias=\"@/*\" --yes)",
+      "Bash(cp -r nextapp-tmp/. . --backup=none)",
+      "Bash(rm -rf nextapp-tmp)",
+      "Bash(npm install @supabase/supabase-js @supabase/ssr resend react-email @react-email/components bcryptjs lucide-react clsx tailwind-merge class-variance-authority)",
+      "Bash(npm install -D @types/bcryptjs)",
+      "Bash(npx shadcn-ui@latest init --yes)",
+      "Bash(printf '\\\\n\\\\n\\\\n\\\\n')",
+      "Bash(npx shadcn@latest init --yes)",
+      "Bash(printf '\\\\n\\\\n\\\\n\\\\n\\\\n\\\\n\\\\n\\\\n')",
+      "Bash(npx shadcn@latest init --defaults)"
+    ]
+  }
+}

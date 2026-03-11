@@ -1,0 +1,190 @@
+<h2>Admin RH — Gestion des travailleurs</h2>
+<p class="subtitle">Vue centralisée de tous les travailleurs avec création, modification et gestion des rôles</p>
+
+<style>
+* { box-sizing: border-box; }
+.app-shell { display: flex; height: 480px; border: 1.5px solid #ddd; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+
+.sidebar { width: 52px; background: #1a2332; display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 4px; flex-shrink: 0; }
+.sidebar-logo { color: #e53e3e; font-size: 15px; font-weight: 900; letter-spacing: -1px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); width: 100%; text-align: center; }
+.nav-item { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: rgba(255,255,255,0.35); }
+.nav-item.active { background: rgba(229,62,62,0.15); color: #fc8181; }
+.nav-spacer { flex: 1; }
+.nav-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg,#5b47cc,#4338ca); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: 800; box-shadow: 0 0 0 2px rgba(91,71,204,0.4); }
+
+.content { flex: 1; background: #f0f2f8; overflow: hidden; display: flex; flex-direction: column; }
+.topbar { background: #fff; padding: 10px 16px; border-bottom: 1px solid #e8eaf0; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.topbar-title { font-size: 14px; font-weight: 800; color: #1a2332; }
+.topbar-sub { font-size: 10px; color: #9ca3af; }
+.topbar-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.btn-primary { background: #e53e3e; color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+.btn-secondary { background: #fff; color: #374151; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 6px 12px; font-size: 11px; font-weight: 600; cursor: pointer; }
+
+/* Toolbar */
+.toolbar { padding: 10px 14px; background: #fff; border-bottom: 1px solid #f3f4f6; display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+.search-box { flex: 1; display: flex; align-items: center; gap: 6px; background: #f9fafb; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 5px 10px; }
+.search-box input { border: none; background: transparent; font-size: 11px; color: #374151; outline: none; flex: 1; }
+.filter-chip { background: #f3f4f6; border: 1.5px solid #e5e7eb; border-radius: 20px; padding: 4px 10px; font-size: 10px; font-weight: 600; color: #374151; cursor: pointer; white-space: nowrap; }
+.filter-chip.active { background: #fef2f2; border-color: #fca5a5; color: #e53e3e; }
+
+/* Stats row */
+.stats-row { display: flex; gap: 8px; padding: 10px 14px 0; flex-shrink: 0; }
+.stat-pill { background: #fff; border: 1px solid #e8eaf0; border-radius: 8px; padding: 6px 12px; display: flex; align-items: center; gap: 6px; }
+.stat-num { font-size: 16px; font-weight: 800; color: #1a2332; }
+.stat-label { font-size: 9px; color: #9ca3af; font-weight: 600; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-green { background: #10b981; }
+.dot-red { background: #e53e3e; }
+.dot-yellow { background: #f59e0b; }
+
+/* Table */
+.table-wrap { flex: 1; overflow-y: auto; padding: 10px 14px 14px; }
+.table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; border: 1px solid #e8eaf0; font-size: 11px; }
+.table thead th { background: #f9fafb; padding: 8px 12px; text-align: left; font-size: 9px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1.5px solid #f3f4f6; }
+.table tbody tr { border-top: 1px solid #f9fafb; transition: background 0.1s; cursor: pointer; }
+.table tbody tr:hover { background: #fafafa; }
+.table tbody td { padding: 9px 12px; vertical-align: middle; }
+
+/* Avatar cell */
+.user-cell { display: flex; align-items: center; gap: 8px; }
+.avatar-sm { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; font-weight: 800; flex-shrink: 0; }
+.user-name { font-weight: 700; color: #1a2332; font-size: 11px; }
+.user-email { font-size: 9px; color: #9ca3af; }
+
+/* Chips */
+.tag { display: inline-block; padding: 2px 7px; border-radius: 20px; font-size: 9px; font-weight: 700; }
+.tag-admin { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.tag-juridique { background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe; }
+.tag-compta { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+.tag-permanent { background: #fce7f3; color: #9d174d; border: 1px solid #fbcfe8; }
+.tag-svc-admin { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+.opt-a { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.opt-b { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+.status-active { color: #10b981; font-weight: 700; font-size: 10px; }
+.status-inactive { color: #9ca3af; font-weight: 600; font-size: 10px; }
+
+/* Actions */
+.actions-cell { display: flex; gap: 4px; }
+.action-btn { width: 26px; height: 26px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; border: none; }
+.action-edit { background: #eff6ff; color: #3b82f6; }
+.action-delete { background: #fef2f2; color: #e53e3e; }
+.action-admin { background: #fef9c3; color: #a16207; }
+
+/* Drawer hint */
+.drawer-hint { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 10px; color: #9ca3af; pointer-events: none; }
+</style>
+
+<div class="app-shell">
+  <div class="sidebar">
+    <div class="sidebar-logo">CG</div>
+    <div class="nav-item">🏠</div>
+    <div class="nav-item active">👥</div>
+    <div class="nav-item">⏱</div>
+    <div class="nav-item">🌴</div>
+    <div class="nav-item">📅</div>
+    <div class="nav-item">📊</div>
+    <div class="nav-spacer"></div>
+    <div class="nav-avatar">CB</div>
+  </div>
+
+  <div class="content">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">👥 Gestion des travailleurs</div>
+        <div class="topbar-sub">Centrale Générale FGTB Namur-Luxembourg</div>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn-secondary">📤 Export</button>
+        <button class="btn-primary">＋ Nouveau travailleur</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-box">
+        <span style="color:#9ca3af;font-size:12px;">🔍</span>
+        <input placeholder="Rechercher par nom, service..." />
+      </div>
+      <div class="filter-chip active">Tous (19)</div>
+      <div class="filter-chip">Admin (6)</div>
+      <div class="filter-chip">Juridique (5)</div>
+      <div class="filter-chip">Compta/RH (2)</div>
+      <div class="filter-chip">Permanents (6)</div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-pill"><div class="dot dot-green"></div><span class="stat-num">16</span><span class="stat-label">Actifs</span></div>
+      <div class="stat-pill"><div class="dot dot-yellow"></div><span class="stat-num">2</span><span class="stat-label">En congé</span></div>
+      <div class="stat-pill"><div class="dot dot-red"></div><span class="stat-num">1</span><span class="stat-label">Malade</span></div>
+      <div class="stat-pill" style="margin-left:auto"><span style="font-size:10px;color:#9ca3af;">Option A : <strong style="color:#1a2332">12</strong></span></div>
+      <div class="stat-pill"><span style="font-size:10px;color:#9ca3af;">Option B : <strong style="color:#1a2332">7</strong></span></div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Travailleur</th>
+            <th>Service</th>
+            <th>Bureau(x)</th>
+            <th>Option</th>
+            <th>Rôle app</th>
+            <th>Statut</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><div class="user-cell"><div class="avatar-sm" style="background:linear-gradient(135deg,#e53e3e,#9b2c2c)">MV</div><div><div class="user-name">Marie Vandenberghe</div><div class="user-email">marie.v@accg-nalux.be</div></div></div></td>
+            <td><span class="tag tag-svc-admin">Svc Admin</span></td>
+            <td style="font-size:10px;color:#374151">Lib · Mar(mer)</td>
+            <td><span class="tag opt-a">A</span></td>
+            <td><span class="tag tag-admin">★ Admin RH</span></td>
+            <td><span class="status-active">● Actif</span></td>
+            <td><div class="actions-cell"><button class="action-btn action-edit">✏️</button><button class="action-btn action-admin">⭐</button><button class="action-btn action-delete">🗑</button></div></td>
+          </tr>
+          <tr>
+            <td><div class="user-cell"><div class="avatar-sm" style="background:linear-gradient(135deg,#5b47cc,#4338ca)">PL</div><div><div class="user-name">Paul Lambert</div><div class="user-email">paul.l@accg-nalux.be</div></div></div></td>
+            <td><span class="tag tag-juridique">Juridique</span></td>
+            <td style="font-size:10px;color:#374151">Namur</td>
+            <td><span class="tag opt-b">B</span></td>
+            <td style="color:#9ca3af;font-size:10px;">Worker</td>
+            <td><span class="tag" style="background:#fef2f2;color:#e53e3e;border:1px solid #fca5a5;font-size:9px">🌴 Congé</span></td>
+            <td><div class="actions-cell"><button class="action-btn action-edit">✏️</button><button class="action-btn action-admin">⭐</button><button class="action-btn action-delete">🗑</button></div></td>
+          </tr>
+          <tr>
+            <td><div class="user-cell"><div class="avatar-sm" style="background:linear-gradient(135deg,#0ea5e9,#0369a1)">SC</div><div><div class="user-name">Sophie Charlier</div><div class="user-email">sophie.c@accg-nalux.be</div></div></div></td>
+            <td><span class="tag tag-compta">Compta/RH</span></td>
+            <td style="font-size:10px;color:#374151">Lib · Arl(jeu)</td>
+            <td><span class="tag opt-a">A</span></td>
+            <td style="color:#9ca3af;font-size:10px;">Worker</td>
+            <td><span class="status-active">● Actif</span></td>
+            <td><div class="actions-cell"><button class="action-btn action-edit">✏️</button><button class="action-btn action-admin">⭐</button><button class="action-btn action-delete">🗑</button></div></td>
+          </tr>
+          <tr>
+            <td><div class="user-cell"><div class="avatar-sm" style="background:linear-gradient(135deg,#ec4899,#be185d)">AR</div><div><div class="user-name">Anne Renard</div><div class="user-email">anne.r@accg-nalux.be</div></div></div></td>
+            <td><span class="tag tag-permanent">Permanent</span></td>
+            <td style="font-size:10px;color:#9ca3af;font-style:italic">Sur la route</td>
+            <td><span class="tag opt-b">B</span></td>
+            <td style="color:#9ca3af;font-size:10px;">Worker</td>
+            <td><span class="tag" style="background:#fef9c3;color:#a16207;border:1px solid #fde68a;font-size:9px">🏥 Maladie</span></td>
+            <td><div class="actions-cell"><button class="action-btn action-edit">✏️</button><button class="action-btn action-admin">⭐</button><button class="action-btn action-delete">🗑</button></div></td>
+          </tr>
+          <tr style="opacity:0.5">
+            <td><div class="user-cell"><div class="avatar-sm" style="background:#9ca3af">JD</div><div><div class="user-name">Jean Dupont</div><div class="user-email">jean.d@accg-nalux.be</div></div></div></td>
+            <td><span class="tag tag-juridique">Juridique</span></td>
+            <td style="font-size:10px;color:#374151">Namur · Mar</td>
+            <td><span class="tag opt-a">A</span></td>
+            <td style="color:#9ca3af;font-size:10px;">Worker</td>
+            <td><span class="status-inactive">○ Inactif</span></td>
+            <td><div class="actions-cell"><button class="action-btn action-edit">✏️</button><button class="action-btn action-admin">⭐</button><button class="action-btn action-delete">🗑</button></div></td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="font-size:10px;color:#9ca3af;margin-top:8px;text-align:center;">5 affichés sur 19 · Cliquer sur une ligne pour ouvrir la fiche complète</div>
+    </div>
+  </div>
+</div>
+
+<div style="background:#f0f7ff;border-left:4px solid #3b82f6;padding:10px 14px;border-radius:0 6px 6px 0;font-size:12px;color:#333;margin-top:12px;">
+  <strong>Actions disponibles :</strong> ✏️ Modifier la fiche complète (ouvre le même formulaire profil en mode édition admin) · ⭐ Attribuer / retirer le rôle Admin RH · 🗑 Désactiver le compte (jamais supprimé, historique conservé). Cliquer sur une ligne ouvre la fiche complète.
+</div>

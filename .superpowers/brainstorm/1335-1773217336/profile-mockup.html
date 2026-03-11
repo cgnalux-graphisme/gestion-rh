@@ -1,0 +1,173 @@
+<h2>Profil employé</h2>
+<p class="subtitle">Le travailleur peut modifier ses coordonnées (zone verte). Les données RH sont visibles mais non modifiables (zone grise) — seul l'admin RH peut les changer.</p>
+
+<style>
+.app-shell { display: flex; height: 400px; border: 1.5px solid #ddd; border-radius: 10px; overflow: hidden; }
+.sidebar { width: 48px; background: #1e2a3a; display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 2px; flex-shrink: 0; }
+.sidebar-logo { color: #e53e3e; font-size: 16px; font-weight: 900; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.15); width: 100%; text-align: center; }
+.nav-item { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; color: rgba(255,255,255,0.4); }
+.nav-item.active { background: rgba(229,62,62,0.2); color: #fc8181; }
+.nav-spacer { flex: 1; }
+.nav-avatar { width: 30px; height: 30px; border-radius: 50%; background: #e53e3e; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: 700; }
+
+.content { flex: 1; background: #f5f6fa; overflow-y: auto; display: flex; flex-direction: column; }
+.topbar { background: #fff; padding: 8px 14px; border-bottom: 1px solid #eee; flex-shrink: 0; }
+.topbar-title { font-size: 13px; font-weight: 700; color: #1e2a3a; }
+.topbar-sub { font-size: 10px; color: #888; }
+
+.profile-body { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+
+.profile-header { background: #fff; border-radius: 8px; padding: 12px; display: flex; align-items: center; gap: 12px; border: 1px solid #eee; }
+.avatar-big { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #e53e3e, #c53030); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; font-weight: 700; flex-shrink: 0; }
+.profile-name { font-size: 14px; font-weight: 800; color: #1e2a3a; }
+.profile-meta { font-size: 11px; color: #666; margin-top: 2px; }
+.profile-badges { display: flex; gap: 5px; margin-top: 4px; }
+.chip { font-size: 9px; padding: 2px 7px; border-radius: 8px; font-weight: 600; }
+.chip-service { background: #e8e4ff; color: #5b47cc; }
+.chip-option { background: #d1ecf1; color: #0c5460; }
+.chip-admin { background: #fde68a; color: #856404; }
+
+.section-card { background: #fff; border-radius: 8px; border: 1px solid #eee; overflow: hidden; }
+.section-header { padding: 8px 12px; font-size: 11px; font-weight: 700; color: #1e2a3a; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 6px; }
+.section-header .edit-badge { margin-left: auto; font-size: 9px; padding: 2px 7px; border-radius: 8px; font-weight: 600; }
+.editable { background: #f0fff4; border-left: 3px solid #38a169; }
+.readonly { background: #f9fafb; border-left: 3px solid #d1d5db; }
+
+.fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 12px; }
+.field { display: flex; flex-direction: column; gap: 2px; }
+.field-label { font-size: 9px; color: #888; font-weight: 600; text-transform: uppercase; }
+.field-value { font-size: 11px; color: #1e2a3a; font-weight: 500; }
+.field-input { font-size: 11px; color: #1e2a3a; background: #fff; border: 1.5px solid #a7f3d0; border-radius: 4px; padding: 3px 6px; }
+.field-value.muted { color: #9ca3af; font-style: italic; }
+
+.bureau-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+.bureau-table th { background: #f3f4f6; padding: 4px 8px; text-align: left; color: #555; font-weight: 600; font-size: 9px; }
+.bureau-table td { padding: 4px 8px; border-top: 1px solid #f3f4f6; color: #333; }
+.bureau-chip { display: inline-block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 1px 6px; font-size: 9px; color: #1d4ed8; }
+
+.save-btn { background: #e53e3e; color: #fff; border: none; border-radius: 6px; padding: 7px 16px; font-size: 11px; font-weight: 700; cursor: pointer; margin: 8px 12px; }
+</style>
+
+<div class="app-shell">
+  <div class="sidebar">
+    <div class="sidebar-logo">CG</div>
+    <div class="nav-item">🏠</div>
+    <div class="nav-item">⏱</div>
+    <div class="nav-item">🌴</div>
+    <div class="nav-item">📅</div>
+    <div class="nav-item">📄</div>
+    <div class="nav-spacer"></div>
+    <div class="nav-avatar active" style="background:#e53e3e;outline:2px solid #fc8181">MV</div>
+  </div>
+  <div class="content">
+    <div class="topbar">
+      <div class="topbar-title">👤 Mon profil</div>
+      <div class="topbar-sub">Dernière mise à jour : 03/02/2026</div>
+    </div>
+    <div class="profile-body">
+
+      <!-- Header -->
+      <div class="profile-header">
+        <div class="avatar-big">MV</div>
+        <div>
+          <div class="profile-name">Marie Vandenberghe</div>
+          <div class="profile-meta">marie.vandenberghe@accg-nalux.be</div>
+          <div class="profile-badges">
+            <span class="chip chip-service">Service Admin</span>
+            <span class="chip chip-option">Option A</span>
+            <span class="chip chip-admin">Admin RH</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Coordonnées (modifiables) -->
+      <div class="section-card editable">
+        <div class="section-header">
+          📝 Mes coordonnées
+          <span class="edit-badge" style="background:#d4edda;color:#155724;">✏️ Modifiable</span>
+        </div>
+        <div class="fields-grid">
+          <div class="field">
+            <span class="field-label">Téléphone</span>
+            <input class="field-input" value="+32 498 12 34 56" />
+          </div>
+          <div class="field">
+            <span class="field-label">Adresse</span>
+            <input class="field-input" value="Rue des Lilas 12, 6800 Libramont" />
+          </div>
+          <div class="field">
+            <span class="field-label">Contact urgence</span>
+            <input class="field-input" value="Jean Vandenberghe — 0477 98 76 54" />
+          </div>
+          <div class="field">
+            <span class="field-label">Mot de passe</span>
+            <input class="field-input" type="password" value="••••••••" />
+          </div>
+        </div>
+        <button class="save-btn">Enregistrer les modifications</button>
+      </div>
+
+      <!-- Données RH (lecture seule) -->
+      <div class="section-card readonly">
+        <div class="section-header">
+          🏢 Données RH
+          <span class="edit-badge" style="background:#f3f4f6;color:#6b7280;">🔒 Admin uniquement</span>
+        </div>
+        <div class="fields-grid">
+          <div class="field">
+            <span class="field-label">Service</span>
+            <span class="field-value">Service Administratif</span>
+          </div>
+          <div class="field">
+            <span class="field-label">Type de contrat</span>
+            <span class="field-value">CDI — temps plein</span>
+          </div>
+          <div class="field">
+            <span class="field-label">Date d'entrée</span>
+            <span class="field-value">01/09/2015</span>
+          </div>
+          <div class="field">
+            <span class="field-label">Ancienneté</span>
+            <span class="field-value">10 ans 6 mois</span>
+          </div>
+          <div class="field">
+            <span class="field-label">Option horaire</span>
+            <span class="field-value">Option A (36,5h/sem) · jusqu'au 15/12/26</span>
+          </div>
+          <div class="field">
+            <span class="field-label">Date de naissance</span>
+            <span class="field-value">15/04/1985</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Affectation bureaux -->
+      <div class="section-card readonly">
+        <div class="section-header">
+          📍 Affectation par bureau
+          <span class="edit-badge" style="background:#f3f4f6;color:#6b7280;">🔒 Admin uniquement</span>
+        </div>
+        <div style="padding: 8px 12px;">
+          <table class="bureau-table">
+            <tr>
+              <th>Jour</th><th>Lundi</th><th>Mardi</th><th>Mercredi</th><th>Jeudi</th><th>Vendredi</th>
+            </tr>
+            <tr>
+              <td style="font-weight:600;color:#888;">Bureau</td>
+              <td><span class="bureau-chip">Libramont</span></td>
+              <td><span class="bureau-chip">Libramont</span></td>
+              <td><span class="bureau-chip" style="background:#fff7ed;border-color:#fed7aa;color:#c2410c;">Marche</span></td>
+              <td><span class="bureau-chip">Libramont</span></td>
+              <td><span class="bureau-chip">Libramont</span></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div style="background:#fffbeb;border-left:4px solid #f59e0b;padding:10px 14px;border-radius:0 6px 6px 0;font-size:12px;color:#333;margin-top:12px;">
+  <strong>Règle métier :</strong> Le travailleur peut modifier ses coordonnées et son mot de passe à tout moment. L'option horaire A/B ne peut être changée qu'avant le 15 décembre pour l'année suivante — uniquement par l'admin RH sur demande.
+</div>

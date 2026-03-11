@@ -1,0 +1,136 @@
+<h2>Flux d'authentification</h2>
+<p class="subtitle">Deux flux distincts — création de compte par l'admin, puis connexion quotidienne du travailleur</p>
+
+<style>
+.flow-section { margin-bottom: 28px; }
+.flow-title { font-size: 14px; font-weight: 700; color: #1e2a3a; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.flow-steps { display: flex; align-items: flex-start; gap: 0; flex-wrap: wrap; }
+.step { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 110px; max-width: 130px; }
+.step-circle { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.step-circle.admin { background: #e8e4ff; }
+.step-circle.system { background: #fff3cd; }
+.step-circle.worker { background: #d4edda; }
+.step-label { font-size: 11px; text-align: center; color: #444; line-height: 1.4; }
+.step-sublabel { font-size: 10px; text-align: center; color: #888; line-height: 1.3; font-style: italic; }
+.arrow { font-size: 20px; color: #ccc; margin: 0 2px; align-self: center; padding-bottom: 24px; }
+.badge-admin { background: #e8e4ff; color: #5b47cc; font-size: 10px; padding: 2px 7px; border-radius: 8px; font-weight: 600; }
+.badge-system { background: #fff3cd; color: #856404; font-size: 10px; padding: 2px 7px; border-radius: 8px; font-weight: 600; }
+.badge-worker { background: #d4edda; color: #155724; font-size: 10px; padding: 2px 7px; border-radius: 8px; font-weight: 600; }
+.divider { border: none; border-top: 2px dashed #e0e0e0; margin: 20px 0; }
+.otp-box { background: #f8f9ff; border: 1.5px solid #c5beff; border-radius: 8px; padding: 10px 14px; display: inline-flex; align-items: center; gap: 10px; font-size: 12px; color: #333; margin-top: 4px; }
+.otp-digits { display: flex; gap: 4px; }
+.otp-digit { width: 24px; height: 30px; border: 2px solid #6c63ff; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: #6c63ff; background: #fff; }
+.note-box { background: #f0f7ff; border-left: 4px solid #3b82f6; padding: 10px 14px; border-radius: 0 6px 6px 0; font-size: 12px; color: #333; margin-top: 14px; }
+</style>
+
+<!-- Flux 1: Création de compte -->
+<div class="flow-section">
+  <div class="flow-title">
+    <span class="badge-admin">ADMIN</span>
+    Flux 1 — Création d'un nouveau compte travailleur
+  </div>
+  <div class="flow-steps">
+    <div class="step">
+      <div class="step-circle admin">👨‍💼</div>
+      <div class="step-label"><strong>Admin RH</strong> crée le profil</div>
+      <div class="step-sublabel">Nom, prénom, service, bureau, option A/B, rôle</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step">
+      <div class="step-circle system">📧</div>
+      <div class="step-label"><strong>Resend</strong> envoie l'invitation</div>
+      <div class="step-sublabel">Email avec code OTP 6 chiffres, valable 24h</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step">
+      <div class="step-circle worker">🔢</div>
+      <div class="step-label"><strong>Travailleur</strong> saisit le code</div>
+      <div class="step-sublabel">Sur la page d'activation de l'app</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step">
+      <div class="step-circle worker">🔒</div>
+      <div class="step-label"><strong>Travailleur</strong> crée son mot de passe</div>
+      <div class="step-sublabel">Min 8 caractères, confirmé</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step">
+      <div class="step-circle worker">✅</div>
+      <div class="step-label"><strong>Compte actif</strong></div>
+      <div class="step-sublabel">Accès au portail personnel</div>
+    </div>
+  </div>
+
+  <div style="margin-top:12px">
+    <div class="otp-box">
+      Exemple de code reçu par email :
+      <div class="otp-digits">
+        <div class="otp-digit">4</div>
+        <div class="otp-digit">8</div>
+        <div class="otp-digit">2</div>
+        <div class="otp-digit">9</div>
+        <div class="otp-digit">1</div>
+        <div class="otp-digit">7</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- Flux 2: Connexion quotidienne -->
+<div class="flow-section">
+  <div class="flow-title">
+    <span class="badge-worker">WORKER / ADMIN</span>
+    Flux 2 — Connexion quotidienne
+  </div>
+  <div class="flow-steps">
+    <div class="step">
+      <div class="step-circle worker">🌐</div>
+      <div class="step-label"><strong>Page de login</strong></div>
+      <div class="step-sublabel">Email + mot de passe</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step">
+      <div class="step-circle system">🔐</div>
+      <div class="step-label"><strong>Supabase Auth</strong> vérifie</div>
+      <div class="step-sublabel">Session JWT sécurisée</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step">
+      <div class="step-circle worker">🏠</div>
+      <div class="step-label"><strong>Dashboard</strong> personnalisé</div>
+      <div class="step-sublabel">Selon rôle : worker ou admin_rh</div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- Flux 3: Mot de passe oublié -->
+<div class="flow-section">
+  <div class="flow-title">
+    <span class="badge-system">SYSTÈME</span>
+    Flux 3 — Mot de passe oublié
+  </div>
+  <div class="flow-steps">
+    <div class="step">
+      <div class="step-circle worker">❓</div>
+      <div class="step-label">Clic "Mot de passe oublié"</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step">
+      <div class="step-circle system">📧</div>
+      <div class="step-label">Code OTP envoyé par email (Resend)</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step">
+      <div class="step-circle worker">🔒</div>
+      <div class="step-label">Nouveau mot de passe défini</div>
+    </div>
+  </div>
+</div>
+
+<div class="note-box">
+  <strong>Note technique :</strong> Supabase Auth gère nativement les OTP et les invitations. Resend est utilisé uniquement pour le template email personnalisé (logo CG FGTB, texte en français). Pas de SMS — email uniquement.
+</div>

@@ -1,0 +1,335 @@
+<h2>Tableau récapitulatif mensuel</h2>
+<p class="subtitle">Travailleurs par ordre alphabétique · Tous les jours du mois en colonnes · Modification par cellule</p>
+
+<style>
+* { box-sizing: border-box; }
+
+/* App shell */
+.app-shell { display: flex; height: 500px; border: 1.5px solid #ddd; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+.sidebar { width: 52px; background: #1a2332; display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 4px; flex-shrink: 0; }
+.sidebar-logo { color: #e53e3e; font-size: 15px; font-weight: 900; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); width: 100%; text-align: center; }
+.nav-item { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: rgba(255,255,255,0.35); }
+.nav-item.active { background: rgba(229,62,62,0.15); color: #fc8181; }
+.nav-spacer { flex: 1; }
+.nav-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg,#5b47cc,#4338ca); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: 800; }
+.content { flex: 1; background: #f0f2f8; overflow: hidden; display: flex; flex-direction: column; }
+
+/* Topbar */
+.topbar { background: #fff; padding: 10px 16px; border-bottom: 1px solid #e8eaf0; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.topbar-title { font-size: 14px; font-weight: 800; color: #1a2332; }
+.topbar-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.btn-primary { background: #e53e3e; color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-size: 11px; font-weight: 700; cursor: pointer; }
+.btn-secondary { background: #fff; color: #374151; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 6px 12px; font-size: 11px; font-weight: 600; cursor: pointer; }
+.month-nav { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; color: #1a2332; }
+.month-nav button { background: #f3f4f6; border: none; border-radius: 6px; width: 26px; height: 26px; cursor: pointer; font-size: 13px; color: #374151; }
+
+/* Filters */
+.toolbar { padding: 8px 14px; background: #fff; border-bottom: 1px solid #f3f4f6; display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.filter-chip { background: #f3f4f6; border: 1.5px solid #e5e7eb; border-radius: 20px; padding: 3px 10px; font-size: 10px; font-weight: 600; color: #374151; cursor: pointer; }
+.filter-chip.active { background: #fef2f2; border-color: #fca5a5; color: #e53e3e; }
+
+/* Legend */
+.legend { display: flex; gap: 10px; padding: 6px 14px; background: #fff; border-bottom: 1px solid #f3f4f6; flex-shrink: 0; flex-wrap: wrap; }
+.leg { display: flex; align-items: center; gap: 4px; font-size: 9px; color: #6b7280; font-weight: 600; }
+.leg-dot { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 800; color: #fff; }
+
+/* Table container */
+.table-wrap { flex: 1; overflow: auto; padding: 10px 14px; }
+
+table { border-collapse: collapse; font-size: 10px; background: #fff; border-radius: 10px; overflow: hidden; border: 1px solid #e8eaf0; min-width: 800px; }
+
+/* Header rows */
+thead tr:first-child th { background: #1a2332; color: rgba(255,255,255,0.9); padding: 7px 4px; text-align: center; font-size: 9px; font-weight: 700; border-right: 1px solid rgba(255,255,255,0.08); white-space: nowrap; }
+thead tr:first-child th.name-col { text-align: left; padding-left: 12px; min-width: 130px; position: sticky; left: 0; z-index: 2; background: #1a2332; }
+thead tr:first-child th.day-col { min-width: 28px; max-width: 28px; }
+thead tr:first-child th.weekend { background: #111827; color: rgba(255,255,255,0.4); }
+thead tr:first-child th.today-col { background: #9b2c2c; color: #fff; }
+
+thead tr:nth-child(2) th { background: #f9fafb; color: #9ca3af; padding: 4px; text-align: center; font-size: 8px; font-weight: 700; text-transform: uppercase; border-bottom: 1.5px solid #e8eaf0; border-right: 1px solid #f3f4f6; }
+thead tr:nth-child(2) th.name-col { text-align: left; padding-left: 12px; position: sticky; left: 0; z-index: 2; background: #f9fafb; }
+
+/* Body */
+tbody tr { border-top: 1px solid #f9fafb; }
+tbody tr:hover { background: #fafafa; }
+tbody td { padding: 0; border-right: 1px solid #f9fafb; vertical-align: middle; }
+tbody td.name-col { padding: 6px 12px; position: sticky; left: 0; background: #fff; z-index: 1; min-width: 130px; border-right: 2px solid #e8eaf0; }
+tbody tr:hover td.name-col { background: #fafafa; }
+
+.worker-name { font-weight: 700; color: #1a2332; font-size: 10px; }
+.worker-service { font-size: 8px; color: #9ca3af; }
+
+/* Status cells */
+.day-cell { width: 28px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.1s; position: relative; }
+.day-cell:hover { filter: brightness(0.88); }
+.day-cell:hover::after { content: '✏️'; position: absolute; top: 2px; right: 1px; font-size: 7px; }
+
+.status { width: 22px; height: 22px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: #fff; }
+.s-P { background: #10b981; } /* Présent */
+.s-C { background: #f59e0b; } /* Congé */
+.s-M { background: #ef4444; } /* Maladie */
+.s-F { background: #6b7280; } /* Férié */
+.s-R { background: #6c63ff; } /* Repos comp */
+.s-X { background: #f97316; } /* Absent non justifié */
+.s-blank { background: #f3f4f6; color: #d1d5db; border: 1.5px dashed #e5e7eb; } /* Pas encore */
+.s-alert { background: #fef2f2; border: 1.5px dashed #fca5a5; color: #e53e3e; } /* Alerte pointage */
+.s-W { background: #e8eaf0; color: transparent; } /* Weekend */
+.today-cell { background: #fff9f9; }
+
+/* Alert badge on cell */
+.alert-badge { position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; background: #e53e3e; border-radius: 50%; }
+
+/* Modal overlay */
+.modal-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 100; border-radius: 12px; }
+.modal { background: #fff; border-radius: 12px; padding: 20px; max-width: 320px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.modal-title { font-size: 14px; font-weight: 800; color: #1a2332; margin-bottom: 6px; }
+.modal-sub { font-size: 11px; color: #6b7280; margin-bottom: 16px; line-height: 1.5; }
+.modal-options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.modal-opt { padding: 10px 14px; border: 1.5px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.15s; }
+.modal-opt:hover { border-color: #6c63ff; background: #f9f8ff; }
+.modal-opt-title { font-size: 12px; font-weight: 700; color: #1a2332; }
+.modal-opt-sub { font-size: 10px; color: #9ca3af; margin-top: 2px; }
+.modal-opt.correction { border-color: #a7f3d0; background: #f0fff4; }
+.modal-opt.correction .modal-opt-title { color: #065f46; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.btn-cancel-sm { background: transparent; border: 1.5px solid #e5e7eb; border-radius: 6px; padding: 6px 12px; font-size: 11px; font-weight: 600; cursor: pointer; color: #6b7280; }
+.time-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+.time-row > div { min-width: 0; }
+.time-input { width: 100%; text-align: center; border: 1.5px solid #a7f3d0; border-radius: 6px; padding: 4px 2px; font-size: 11px; font-weight: 700; color: #1a2332; background: #f0fff4; }
+.time-label { font-size: 9px; color: #6b7280; text-align: center; margin-top: 3px; font-weight: 600; }
+</style>
+
+<div class="app-shell" style="position:relative;">
+  <div class="sidebar">
+    <div class="sidebar-logo">CG</div>
+    <div class="nav-item">🏠</div>
+    <div class="nav-item active">👥</div>
+    <div class="nav-item">⏱</div>
+    <div class="nav-item">🌴</div>
+    <div class="nav-item">📅</div>
+    <div class="nav-item">📊</div>
+    <div class="nav-spacer"></div>
+    <div class="nav-avatar">CB</div>
+  </div>
+
+  <div class="content">
+    <div class="topbar">
+      <div class="month-nav">
+        <button>‹</button>
+        📊 Mars 2026
+        <button>›</button>
+      </div>
+      <div class="topbar-actions">
+        <div class="filter-chip active" style="font-size:11px">Tous les services</div>
+        <button class="btn-secondary">📤 Export Excel</button>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="leg"><div class="leg-dot s-P">P</div> Présent</div>
+      <div class="leg"><div class="leg-dot s-C">C</div> Congé</div>
+      <div class="leg"><div class="leg-dot s-M">M</div> Maladie</div>
+      <div class="leg"><div class="leg-dot s-R">R</div> Repos comp.</div>
+      <div class="leg"><div class="leg-dot s-F">F</div> Férié</div>
+      <div class="leg"><div class="leg-dot s-X">A</div> Absent non justifié</div>
+      <div class="leg"><div class="leg-dot s-alert" style="color:#e53e3e">?</div> Pointage manquant</div>
+      <div class="leg"><div class="leg-dot s-W"></div> Week-end</div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="name-col">Travailleur</th>
+            <!-- Week 1 -->
+            <th class="day-col weekend">1<br><span style="font-size:7px;opacity:0.6">DIM</span></th>
+            <th class="day-col">2<br><span style="font-size:7px;opacity:0.7">LUN</span></th>
+            <th class="day-col">3<br><span style="font-size:7px;opacity:0.7">MAR</span></th>
+            <th class="day-col">4<br><span style="font-size:7px;opacity:0.7">MER</span></th>
+            <th class="day-col">5<br><span style="font-size:7px;opacity:0.7">JEU</span></th>
+            <th class="day-col">6<br><span style="font-size:7px;opacity:0.7">VEN</span></th>
+            <th class="day-col weekend">7<br><span style="font-size:7px;opacity:0.6">SAM</span></th>
+            <th class="day-col weekend">8<br><span style="font-size:7px;opacity:0.6">DIM</span></th>
+            <th class="day-col">9<br><span style="font-size:7px;opacity:0.7">LUN</span></th>
+            <th class="day-col">10<br><span style="font-size:7px;opacity:0.7">MAR</span></th>
+            <th class="day-col today-col">11<br><span style="font-size:7px;opacity:0.9">MER</span></th>
+            <th class="day-col">12<br><span style="font-size:7px;opacity:0.7">JEU</span></th>
+            <th class="day-col">13<br><span style="font-size:7px;opacity:0.7">VEN</span></th>
+            <th class="day-col weekend">14<br><span style="font-size:7px;opacity:0.6">SAM</span></th>
+            <th class="day-col weekend">15<br><span style="font-size:7px;opacity:0.6">DIM</span></th>
+            <th class="day-col">16<br><span style="font-size:7px;opacity:0.7">LUN</span></th>
+            <th class="day-col">17<br><span style="font-size:7px;opacity:0.7">MAR</span></th>
+            <th class="day-col">18<br><span style="font-size:7px;opacity:0.7">MER</span></th>
+            <th class="day-col">19<br><span style="font-size:7px;opacity:0.7">JEU</span></th>
+            <th class="day-col">20<br><span style="font-size:7px;opacity:0.7">VEN</span></th>
+            <th class="day-col weekend">21<br><span style="font-size:7px">SAM</span></th>
+            <th class="day-col">…</th>
+            <th class="day-col">31</th>
+            <th style="padding:4px 8px;background:#1a2332;font-size:9px;white-space:nowrap;min-width:60px">Total P</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Charlier Sophie -->
+          <tr>
+            <td class="name-col"><div class="worker-name">Charlier, Sophie</div><div class="worker-service">Compta/RH · Opt.A</div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td><div class="day-cell"><div class="status s-P">P</div></div></td>
+            <td><div class="day-cell"><div class="status s-P">P</div></div></td>
+            <td><div class="day-cell"><div class="status s-P">P</div></div></td>
+            <td><div class="day-cell"><div class="status s-P">P</div></div></td>
+            <td><div class="day-cell"><div class="status s-P">P</div></div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td><div class="day-cell"><div class="status s-P">P</div></div></td>
+            <td><div class="day-cell"><div class="status s-C">C</div></div></td>
+            <td class="today-cell"><div class="day-cell"><div class="status s-P">P</div></div></td>
+            <td><div class="day-cell"><div class="status s-blank">—</div></div></td>
+            <td><div class="day-cell"><div class="status s-blank">—</div></div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td><div class="day-cell"><div class="status s-C">C</div></div></td>
+            <td><div class="day-cell"><div class="status s-C">C</div></div></td>
+            <td><div class="day-cell"><div class="status s-blank">—</div></div></td>
+            <td><div class="day-cell"><div class="status s-blank">—</div></div></td>
+            <td><div class="day-cell"><div class="status s-blank">—</div></div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td style="text-align:center;color:#9ca3af;font-size:9px">…</td>
+            <td style="text-align:center;color:#9ca3af;font-size:9px">…</td>
+            <td style="text-align:center;font-weight:800;color:#10b981;padding:0 8px;">8</td>
+          </tr>
+
+          <!-- Lambert Paul -->
+          <tr>
+            <td class="name-col"><div class="worker-name">Lambert, Paul</div><div class="worker-service">Juridique · Opt.B</div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td><div class="day-cell"><div class="status s-P">P</div></div></td>
+            <td><div class="day-cell"><div class="status s-P">P</div></div></td>
+            <td><div class="day-cell"><div class="status s-P">P</div></div></td>
+            <td><div class="day-cell"><div class="status s-P">P</div></div></td>
+            <td><div class="day-cell"><div class="status s-P">P</div></div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td><div class="day-cell"><div class="status s-P">P</div></div></td>
+            <td><div class="day-cell"><div class="status s-P">P</div></div></td>
+            <td class="today-cell"><div class="day-cell" style="position:relative"><div class="status s-alert">?</div><div class="alert-badge"></div></div></td>
+            <td><div class="day-cell"><div class="status s-C">C</div></div></td>
+            <td><div class="day-cell"><div class="status s-C">C</div></div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td><div class="day-cell"><div class="status s-C">C</div></div></td>
+            <td><div class="day-cell"><div class="status s-C">C</div></div></td>
+            <td><div class="day-cell"><div class="status s-blank">—</div></div></td>
+            <td><div class="day-cell"><div class="status s-blank">—</div></div></td>
+            <td><div class="day-cell"><div class="status s-blank">—</div></div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td style="text-align:center;color:#9ca3af;font-size:9px">…</td>
+            <td style="text-align:center;color:#9ca3af;font-size:9px">…</td>
+            <td style="text-align:center;font-weight:800;color:#10b981;padding:0 8px;">9</td>
+          </tr>
+
+          <!-- Renard Anne -->
+          <tr>
+            <td class="name-col"><div class="worker-name">Renard, Anne</div><div class="worker-service">Permanent · Opt.B</div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td><div class="day-cell"><div class="status s-P">P</div></div></td>
+            <td><div class="day-cell"><div class="status s-M">M</div></div></td>
+            <td><div class="day-cell"><div class="status s-M">M</div></div></td>
+            <td><div class="day-cell"><div class="status s-M">M</div></div></td>
+            <td><div class="day-cell"><div class="status s-M">M</div></div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td><div class="day-cell"><div class="status s-M">M</div></div></td>
+            <td><div class="day-cell"><div class="status s-M">M</div></div></td>
+            <td class="today-cell"><div class="day-cell"><div class="status s-M">M</div></div></td>
+            <td><div class="day-cell"><div class="status s-blank">—</div></div></td>
+            <td><div class="day-cell"><div class="status s-blank">—</div></div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td><div class="day-cell"><div class="status s-blank">—</div></div></td>
+            <td><div class="day-cell"><div class="status s-blank">—</div></div></td>
+            <td><div class="day-cell"><div class="status s-blank">—</div></div></td>
+            <td><div class="day-cell"><div class="status s-blank">—</div></div></td>
+            <td><div class="day-cell"><div class="status s-blank">—</div></div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td style="text-align:center;color:#9ca3af;font-size:9px">…</td>
+            <td style="text-align:center;color:#9ca3af;font-size:9px">…</td>
+            <td style="text-align:center;font-weight:800;color:#10b981;padding:0 8px;">1</td>
+          </tr>
+
+          <!-- Vandenberghe Marie -->
+          <tr>
+            <td class="name-col"><div class="worker-name">Vandenberghe, Marie</div><div class="worker-service">Svc Admin · Opt.A · ★ Admin</div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td><div class="day-cell"><div class="status s-P">P</div></div></td>
+            <td><div class="day-cell"><div class="status s-P">P</div></div></td>
+            <td><div class="day-cell"><div class="status s-P">P</div></div></td>
+            <td><div class="day-cell"><div class="status s-P">P</div></div></td>
+            <td><div class="day-cell"><div class="status s-R">R</div></div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td><div class="day-cell"><div class="status s-P">P</div></div></td>
+            <td><div class="day-cell"><div class="status s-P">P</div></div></td>
+            <td class="today-cell"><div class="day-cell"><div class="status s-P">P</div></div></td>
+            <td><div class="day-cell"><div class="status s-blank">—</div></div></td>
+            <td><div class="day-cell"><div class="status s-blank">—</div></div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td><div class="day-cell"><div class="status s-blank">—</div></div></td>
+            <td><div class="day-cell"><div class="status s-blank">—</div></div></td>
+            <td><div class="day-cell"><div class="status s-blank">—</div></div></td>
+            <td><div class="day-cell"><div class="status s-blank">—</div></div></td>
+            <td><div class="day-cell"><div class="status s-blank">—</div></div></td>
+            <td><div class="day-cell"><div class="status s-W"></div></div></td>
+            <td style="text-align:center;color:#9ca3af;font-size:9px">…</td>
+            <td style="text-align:center;color:#9ca3af;font-size:9px">…</td>
+            <td style="text-align:center;font-weight:800;color:#10b981;padding:0 8px;">9</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="font-size:10px;color:#9ca3af;margin-top:8px;">4 affichés sur 19 · Scroll horizontal pour voir tous les jours · Cliquer sur une cellule pour modifier</div>
+    </div>
+  </div>
+
+  <!-- Modal: cellule avec alerte pointage (Paul Lambert, 11 mars) -->
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-title">⚠️ Pointage manquant — Lambert, Paul</div>
+      <div class="modal-sub">Mercredi 11 mars 2026 · Aucun pointage enregistré.<br>Quelle est la situation réelle ?</div>
+      <div class="modal-options">
+        <div class="modal-opt">
+          <div class="modal-opt-title">🚫 Absent (non justifié)</div>
+          <div class="modal-opt-sub">Marquer la journée comme absence — déduire du solde</div>
+        </div>
+        <div class="modal-opt">
+          <div class="modal-opt-title">🌴 Congé / Maladie / Autre</div>
+          <div class="modal-opt-sub">Sélectionner le type d'absence justifiée</div>
+        </div>
+        <div class="modal-opt correction">
+          <div class="modal-opt-title">✏️ Oubli de pointage — Correction manuelle</div>
+          <div class="modal-opt-sub">Le travailleur était présent mais a oublié de pointer</div>
+          <div class="time-row">
+            <div>
+              <input class="time-input" value="08:32" />
+              <div class="time-label">Arrivée</div>
+            </div>
+            <div>
+              <input class="time-input" value="12:00" />
+              <div class="time-label">Midi out</div>
+            </div>
+            <div>
+              <input class="time-input" value="13:00" />
+              <div class="time-label">Midi in</div>
+            </div>
+            <div>
+              <input class="time-input" value="16:30" />
+              <div class="time-label">Départ</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel-sm">Annuler</button>
+        <button class="btn-primary" style="font-size:11px;padding:6px 14px;">Confirmer la correction</button>
+      </div>
+    </div>
+  </div>
+</div>

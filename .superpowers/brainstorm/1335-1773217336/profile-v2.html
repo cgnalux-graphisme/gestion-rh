@@ -1,0 +1,221 @@
+<h2>Profil employé — v2</h2>
+<p class="subtitle">Adresse décomposée en champs séparés · Design amélioré</p>
+
+<style>
+* { box-sizing: border-box; }
+.app-shell { display: flex; height: 440px; border: 1.5px solid #ddd; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+
+/* Sidebar */
+.sidebar { width: 52px; background: #1a2332; display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 4px; flex-shrink: 0; }
+.sidebar-logo { color: #e53e3e; font-size: 15px; font-weight: 900; letter-spacing: -1px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); width: 100%; text-align: center; }
+.nav-item { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: rgba(255,255,255,0.35); transition: all 0.15s; }
+.nav-item.active { background: rgba(229,62,62,0.15); color: #fc8181; }
+.nav-spacer { flex: 1; }
+.nav-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg,#e53e3e,#9b2c2c); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: 800; box-shadow: 0 0 0 2px rgba(229,62,62,0.4); }
+
+/* Content */
+.content { flex: 1; background: #f0f2f8; overflow-y: auto; display: flex; flex-direction: column; }
+
+/* Topbar */
+.topbar { background: #fff; padding: 10px 16px; border-bottom: 1px solid #e8eaf0; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.topbar-back { color: #9ca3af; font-size: 11px; cursor: pointer; }
+.topbar-title { font-size: 14px; font-weight: 800; color: #1a2332; }
+.topbar-sub { font-size: 10px; color: #9ca3af; margin-left: auto; }
+
+/* Profile header card */
+.profile-header { margin: 14px 14px 0; background: linear-gradient(135deg, #1a2332 60%, #2d3748); border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 14px; color: #fff; }
+.avatar-big { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg,#e53e3e,#9b2c2c); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 18px; font-weight: 800; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.2); }
+.profile-name { font-size: 15px; font-weight: 800; }
+.profile-email { font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+.profile-badges { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
+.chip { font-size: 9px; padding: 2px 8px; border-radius: 20px; font-weight: 700; letter-spacing: 0.3px; }
+.chip-service { background: rgba(108,99,255,0.3); color: #c4b5fd; border: 1px solid rgba(108,99,255,0.4); }
+.chip-option { background: rgba(16,185,129,0.2); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
+.chip-admin { background: rgba(245,158,11,0.2); color: #fcd34d; border: 1px solid rgba(245,158,11,0.3); }
+
+/* Tabs */
+.tabs { display: flex; gap: 0; margin: 14px 14px 0; background: #fff; border-radius: 10px; overflow: hidden; border: 1px solid #e8eaf0; flex-shrink: 0; }
+.tab { flex: 1; padding: 8px 10px; font-size: 11px; font-weight: 600; color: #9ca3af; text-align: center; cursor: pointer; border-bottom: 2px solid transparent; }
+.tab.active { color: #e53e3e; border-bottom-color: #e53e3e; background: #fff9f9; }
+
+/* Section cards */
+.body { padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+
+.card { background: #fff; border-radius: 10px; border: 1px solid #e8eaf0; overflow: hidden; }
+.card-head { padding: 10px 14px 8px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f3f4f6; }
+.card-head-title { font-size: 11px; font-weight: 700; color: #1a2332; display: flex; align-items: center; gap: 6px; }
+.badge-edit { font-size: 9px; padding: 2px 8px; border-radius: 20px; font-weight: 600; background: #dcfce7; color: #166534; }
+.badge-lock { font-size: 9px; padding: 2px 8px; border-radius: 20px; font-weight: 600; background: #f3f4f6; color: #6b7280; }
+
+/* Form fields */
+.form { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.form-row { display: grid; gap: 10px; }
+.form-row-2 { grid-template-columns: 1fr 1fr; }
+.form-row-3 { grid-template-columns: 2fr 1fr 1.5fr; }
+.form-row-4 { grid-template-columns: 2fr 0.7fr 1fr 1.2fr; }
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-label { font-size: 9px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+.form-input { padding: 6px 10px; border: 1.5px solid #e5e7eb; border-radius: 7px; font-size: 11px; color: #1a2332; background: #fff; transition: border 0.15s; outline: none; }
+.form-input:focus { border-color: #e53e3e; box-shadow: 0 0 0 3px rgba(229,62,62,0.1); }
+.form-input.readonly { background: #f9fafb; color: #6b7280; border-color: #f3f4f6; cursor: default; }
+.form-input.highlight { border-color: #a7f3d0; background: #f0fff4; }
+
+/* Address section label */
+.addr-section { font-size: 9px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 14px; margin-top: 2px; }
+
+/* Bureau table */
+.bureau-grid { padding: 10px 14px; }
+.bureau-table { width: 100%; border-collapse: collapse; }
+.bureau-table th { font-size: 9px; font-weight: 700; color: #9ca3af; text-transform: uppercase; padding: 4px 8px; border-bottom: 1.5px solid #f3f4f6; text-align: center; }
+.bureau-table td { padding: 6px 8px; text-align: center; border-top: 1px solid #f9fafb; }
+.bureau-chip { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; }
+.bc-lib { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.bc-mar { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+
+/* Save bar */
+.save-bar { padding: 10px 14px; background: #f9fafb; border-top: 1px solid #f3f4f6; display: flex; align-items: center; justify-content: space-between; }
+.save-note { font-size: 10px; color: #9ca3af; }
+.save-btn { background: #e53e3e; color: #fff; border: none; border-radius: 8px; padding: 8px 20px; font-size: 11px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(229,62,62,0.3); }
+.cancel-btn { background: transparent; color: #9ca3af; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 8px 14px; font-size: 11px; font-weight: 600; cursor: pointer; margin-right: 8px; }
+</style>
+
+<div class="app-shell">
+  <div class="sidebar">
+    <div class="sidebar-logo">CG</div>
+    <div class="nav-item">🏠</div>
+    <div class="nav-item">⏱</div>
+    <div class="nav-item">🌴</div>
+    <div class="nav-item">📅</div>
+    <div class="nav-item">📄</div>
+    <div class="nav-spacer"></div>
+    <div class="nav-avatar">MV</div>
+  </div>
+
+  <div class="content">
+    <div class="topbar">
+      <span class="topbar-back">← Accueil</span>
+      <div class="topbar-title" style="margin-left:8px;">👤 Mon profil</div>
+      <div class="topbar-sub">Dernière modif. : 03/02/2026</div>
+    </div>
+
+    <!-- Header -->
+    <div class="profile-header">
+      <div class="avatar-big">MV</div>
+      <div>
+        <div class="profile-name">Marie Vandenberghe</div>
+        <div class="profile-email">marie.vandenberghe@accg-nalux.be</div>
+        <div class="profile-badges">
+          <span class="chip chip-service">Service Admin</span>
+          <span class="chip chip-option">Option A · 36,5h</span>
+          <span class="chip chip-admin">★ Admin RH</span>
+        </div>
+      </div>
+      <div style="margin-left:auto;text-align:right;">
+        <div style="font-size:9px;color:rgba(255,255,255,0.5);">Ancienneté</div>
+        <div style="font-size:20px;font-weight:800;color:#fc8181;">10 ans</div>
+        <div style="font-size:9px;color:rgba(255,255,255,0.5);">depuis 01/09/2015</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active">📝 Mes coordonnées</div>
+      <div class="tab">🏢 Données RH</div>
+      <div class="tab">📍 Affectation</div>
+    </div>
+
+    <!-- Tab content: Coordonnées -->
+    <div class="body">
+
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-title">✏️ Informations personnelles</div>
+          <span class="badge-edit">Modifiable</span>
+        </div>
+        <div class="form">
+          <div class="form-row form-row-2">
+            <div class="form-group">
+              <label class="form-label">Prénom</label>
+              <input class="form-input highlight" value="Marie" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nom</label>
+              <input class="form-input highlight" value="Vandenberghe" />
+            </div>
+          </div>
+          <div class="form-row form-row-2">
+            <div class="form-group">
+              <label class="form-label">Téléphone</label>
+              <input class="form-input highlight" value="+32 498 12 34 56" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Contact d'urgence</label>
+              <input class="form-input highlight" value="Jean Vandenberghe — 0477 98 76 54" />
+            </div>
+          </div>
+        </div>
+
+        <div class="addr-section">Adresse de domicile</div>
+        <div class="form" style="padding-top:8px;">
+          <div class="form-row form-row-3">
+            <div class="form-group">
+              <label class="form-label">Rue / Avenue</label>
+              <input class="form-input highlight" value="Rue des Lilas" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">N°</label>
+              <input class="form-input highlight" value="12" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Boîte (optionnel)</label>
+              <input class="form-input highlight" placeholder="Ex: B3" />
+            </div>
+          </div>
+          <div class="form-row form-row-3">
+            <div class="form-group">
+              <label class="form-label">Code postal</label>
+              <input class="form-input highlight" value="6800" />
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+              <label class="form-label">Commune</label>
+              <input class="form-input highlight" value="Libramont-Chevigny" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Pays</label>
+              <input class="form-input highlight" value="Belgique" />
+            </div>
+          </div>
+        </div>
+
+        <div class="addr-section">Sécurité du compte</div>
+        <div class="form" style="padding-top:8px;">
+          <div class="form-row form-row-2">
+            <div class="form-group">
+              <label class="form-label">Nouveau mot de passe</label>
+              <input class="form-input" type="password" placeholder="Laisser vide pour ne pas changer" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirmer le mot de passe</label>
+              <input class="form-input" type="password" placeholder="••••••••" />
+            </div>
+          </div>
+        </div>
+
+        <div class="save-bar">
+          <span class="save-note">Les champs en vert sont modifiables par vous</span>
+          <div>
+            <button class="cancel-btn">Annuler</button>
+            <button class="save-btn">💾 Enregistrer</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div style="background:#f0f7ff;border-left:4px solid #3b82f6;padding:10px 14px;border-radius:0 6px 6px 0;font-size:12px;color:#333;margin-top:12px;">
+  <strong>Navigation par onglets :</strong> "Données RH" affiche les infos contrat/horaire en lecture seule. "Affectation" montre le tableau bureau par jour. Seul l'onglet "Mes coordonnées" est modifiable par le travailleur.
+</div>

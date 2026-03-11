@@ -1,0 +1,72 @@
+<h2>Décomposition du projet — Par où commencer ?</h2>
+<p class="subtitle">Ce projet comporte 6 modules indépendants. Chacun aura sa propre spec et son plan d'implémentation. Sélectionnez le module à concevoir en premier.</p>
+
+<style>
+.module-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 20px 0; }
+.module-card { border: 2px solid #e0e0e0; border-radius: 10px; padding: 16px; cursor: pointer; transition: all 0.2s; background: #fff; position: relative; }
+.module-card:hover { border-color: #6c63ff; background: #f9f8ff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(108,99,255,0.15); }
+.module-card.selected { border-color: #6c63ff; background: #f0eeff; }
+.module-icon { font-size: 28px; margin-bottom: 8px; }
+.module-title { font-weight: 700; font-size: 15px; color: #1a1a2e; margin-bottom: 4px; }
+.module-desc { font-size: 12px; color: #666; line-height: 1.5; }
+.module-badge { position: absolute; top: 10px; right: 10px; font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 600; }
+.badge-foundation { background: #fff3cd; color: #856404; }
+.badge-core { background: #d1ecf1; color: #0c5460; }
+.badge-advanced { background: #d4edda; color: #155724; }
+.dep-note { font-size: 11px; color: #888; margin-top: 6px; font-style: italic; }
+.flow-arrow { text-align: center; font-size: 22px; color: #ccc; grid-column: 1 / -1; margin: -6px 0; }
+</style>
+
+<div class="module-grid">
+  <div class="module-card" data-choice="auth" onclick="toggleSelect(this)">
+    <span class="module-badge badge-foundation">🏗 Fondation</span>
+    <div class="module-icon">🔐</div>
+    <div class="module-title">Module 1 — Auth & Gestion des utilisateurs</div>
+    <div class="module-desc">Authentification Supabase, rôles (admin / employé / permanent), profils personnels, gestion des services et bureaux</div>
+    <div class="dep-note">Requis par tous les autres modules</div>
+  </div>
+
+  <div class="module-card" data-choice="pointage" onclick="toggleSelect(this)">
+    <span class="module-badge badge-core">⚙ Core</span>
+    <div class="module-icon">⏱</div>
+    <div class="module-title">Module 2 — Système de pointage</div>
+    <div class="module-desc">4 points/jour (arrivée, midi out, midi in, départ), gestion du pot d'heures, heures supp au 1/4h, missions extérieures, récapitulatif</div>
+    <div class="dep-note">Dépend de Module 1</div>
+  </div>
+
+  <div class="module-card" data-choice="schedule" onclick="toggleSelect(this)">
+    <span class="module-badge badge-core">⚙ Core</span>
+    <div class="module-icon">📅</div>
+    <div class="module-title">Module 3 — Calculateur d'horaires</div>
+    <div class="module-desc">Options A/B, horaire d'été, mi-temps médical, 4/5 congé parental, crédit-temps, horaires par bureau/affectation, planning personnel</div>
+    <div class="dep-note">Dépend de Module 1</div>
+  </div>
+
+  <div class="module-card" data-choice="conges" onclick="toggleSelect(this)">
+    <span class="module-badge badge-core">⚙ Core</span>
+    <div class="module-icon">🌴</div>
+    <div class="module-title">Module 4 — Gestion des congés & absences</div>
+    <div class="module-desc">Demandes de congé, workflow d'approbation, petit chômage, jours fériés belges, certificats médicaux, historique, soldes automatiques</div>
+    <div class="dep-note">Dépend de Modules 1 & 3</div>
+  </div>
+
+  <div class="module-card" data-choice="calendrier" onclick="toggleSelect(this)">
+    <span class="module-badge badge-advanced">✅ Avancé</span>
+    <div class="module-icon">🗓</div>
+    <div class="module-title">Module 5 — Calendriers de présences</div>
+    <div class="module-desc">Vue générale par bureau, par service, planning mensuel, vue publique (sans détail), vue admin (avec tout le détail)</div>
+    <div class="dep-note">Dépend de Modules 1, 2 & 4</div>
+  </div>
+
+  <div class="module-card" data-choice="admin" onclick="toggleSelect(this)">
+    <span class="module-badge badge-advanced">✅ Avancé</span>
+    <div class="module-icon">⚙️</div>
+    <div class="module-title">Module 6 — Portail admin complet</div>
+    <div class="module-desc">Tableau de bord centralisé, gestion de tous les travailleurs, rapports, exports, notifications Resend, approbations, modifications de statuts</div>
+    <div class="dep-note">Dépend de tous les modules</div>
+  </div>
+</div>
+
+<div style="background: #fff8e1; border-left: 4px solid #ffc107; padding: 14px; border-radius: 6px; margin-top: 10px; font-size: 13px;">
+  <strong>💡 Recommandation :</strong> Commencer par <strong>Module 1 (Auth)</strong> car c'est la fondation de tout le reste. Ensuite Module 2 (Pointage) qui est le besoin le plus urgent et concret. Les modules suivront dans l'ordre logique.
+</div>

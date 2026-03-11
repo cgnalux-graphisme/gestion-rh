@@ -1,0 +1,284 @@
+<h2>Profil employé — v3</h2>
+<p class="subtitle">Toutes les sections sur une seule page, défilement vertical</p>
+
+<style>
+* { box-sizing: border-box; }
+.app-shell { display: flex; height: 480px; border: 1.5px solid #ddd; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+
+.sidebar { width: 52px; background: #1a2332; display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 4px; flex-shrink: 0; }
+.sidebar-logo { color: #e53e3e; font-size: 15px; font-weight: 900; letter-spacing: -1px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); width: 100%; text-align: center; }
+.nav-item { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: rgba(255,255,255,0.35); }
+.nav-item.active { background: rgba(229,62,62,0.15); color: #fc8181; }
+.nav-spacer { flex: 1; }
+.nav-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg,#e53e3e,#9b2c2c); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: 800; box-shadow: 0 0 0 2px rgba(229,62,62,0.4); }
+
+.content { flex: 1; background: #f0f2f8; overflow-y: auto; display: flex; flex-direction: column; }
+
+.topbar { background: #fff; padding: 10px 16px; border-bottom: 1px solid #e8eaf0; display: flex; align-items: center; gap: 8px; flex-shrink: 0; position: sticky; top: 0; z-index: 10; }
+.topbar-back { color: #9ca3af; font-size: 11px; cursor: pointer; }
+.topbar-title { font-size: 14px; font-weight: 800; color: #1a2332; }
+.topbar-sub { font-size: 10px; color: #9ca3af; margin-left: auto; }
+
+.profile-header { margin: 14px 14px 0; background: linear-gradient(135deg, #1a2332 60%, #2d3748); border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 14px; color: #fff; }
+.avatar-big { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg,#e53e3e,#9b2c2c); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 18px; font-weight: 800; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.2); }
+.profile-name { font-size: 15px; font-weight: 800; }
+.profile-email { font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+.profile-badges { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
+.chip { font-size: 9px; padding: 2px 8px; border-radius: 20px; font-weight: 700; }
+.chip-service { background: rgba(108,99,255,0.3); color: #c4b5fd; border: 1px solid rgba(108,99,255,0.4); }
+.chip-option { background: rgba(16,185,129,0.2); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
+.chip-admin { background: rgba(245,158,11,0.2); color: #fcd34d; border: 1px solid rgba(245,158,11,0.3); }
+
+.body { padding: 12px 14px 20px; display: flex; flex-direction: column; gap: 12px; }
+
+/* Section label */
+.section-label { font-size: 10px; font-weight: 800; color: #6b7280; text-transform: uppercase; letter-spacing: 0.8px; display: flex; align-items: center; gap: 6px; margin-bottom: -4px; }
+.section-label::after { content: ''; flex: 1; height: 1px; background: #e5e7eb; }
+
+.card { background: #fff; border-radius: 10px; border: 1px solid #e8eaf0; overflow: hidden; }
+.card-head { padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f3f4f6; }
+.card-head-title { font-size: 11px; font-weight: 700; color: #1a2332; display: flex; align-items: center; gap: 6px; }
+.badge-edit { font-size: 9px; padding: 2px 8px; border-radius: 20px; font-weight: 700; background: #dcfce7; color: #166534; }
+.badge-lock { font-size: 9px; padding: 2px 8px; border-radius: 20px; font-weight: 700; background: #f3f4f6; color: #9ca3af; }
+
+.form { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.form-row { display: grid; gap: 10px; }
+.col-2 { grid-template-columns: 1fr 1fr; }
+.col-3 { grid-template-columns: 2fr 0.6fr 1fr; }
+.col-2b { grid-template-columns: 0.8fr 2.2fr; }
+.form-group { display: flex; flex-direction: column; gap: 3px; }
+.form-label { font-size: 9px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; }
+.form-input { padding: 7px 10px; border: 1.5px solid #e5e7eb; border-radius: 7px; font-size: 11px; color: #1a2332; background: #fff; }
+.form-input.green { border-color: #a7f3d0; background: #f0fff4; }
+.form-input.muted { background: #f9fafb; color: #9ca3af; border-color: #f3f4f6; }
+.addr-divider { font-size: 9px; font-weight: 700; color: #d1d5db; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 14px; margin-top: -2px; }
+
+/* RH fields grid */
+.rh-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; padding: 2px 0; }
+.rh-item { padding: 10px 14px; border-right: 1px solid #f3f4f6; border-bottom: 1px solid #f3f4f6; }
+.rh-item:nth-child(3n) { border-right: none; }
+.rh-label { font-size: 9px; color: #9ca3af; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+.rh-value { font-size: 12px; color: #1a2332; font-weight: 600; margin-top: 3px; }
+.rh-value.accent { color: #e53e3e; }
+
+/* Bureau table */
+.bureau-wrap { padding: 12px 14px; }
+.bureau-table { width: 100%; border-collapse: collapse; border-radius: 8px; overflow: hidden; }
+.bureau-table th { font-size: 9px; font-weight: 700; color: #9ca3af; text-transform: uppercase; padding: 6px 10px; background: #f9fafb; text-align: center; border-bottom: 1.5px solid #f3f4f6; }
+.bureau-table td { padding: 8px 10px; text-align: center; border-top: 1px solid #f9fafb; }
+.bc { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; }
+.bc-lib { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.bc-mar { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+
+/* Save bar */
+.save-bar { position: sticky; bottom: 0; padding: 10px 14px; background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); border-top: 1px solid #f3f4f6; display: flex; align-items: center; justify-content: space-between; }
+.save-note { font-size: 10px; color: #9ca3af; }
+.btn-cancel { background: transparent; color: #9ca3af; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 7px 14px; font-size: 11px; font-weight: 600; cursor: pointer; margin-right: 8px; }
+.btn-save { background: #e53e3e; color: #fff; border: none; border-radius: 8px; padding: 7px 20px; font-size: 11px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(229,62,62,0.3); }
+</style>
+
+<div class="app-shell">
+  <div class="sidebar">
+    <div class="sidebar-logo">CG</div>
+    <div class="nav-item">🏠</div>
+    <div class="nav-item">⏱</div>
+    <div class="nav-item">🌴</div>
+    <div class="nav-item">📅</div>
+    <div class="nav-item active">👤</div>
+    <div class="nav-spacer"></div>
+    <div class="nav-avatar">MV</div>
+  </div>
+
+  <div class="content">
+    <div class="topbar">
+      <span class="topbar-back">←</span>
+      <div class="topbar-title">👤 Mon profil</div>
+      <div class="topbar-sub">Modifié le 03/02/2026</div>
+    </div>
+
+    <div class="profile-header">
+      <div class="avatar-big">MV</div>
+      <div style="flex:1">
+        <div class="profile-name">Marie Vandenberghe</div>
+        <div class="profile-email">marie.vandenberghe@accg-nalux.be</div>
+        <div class="profile-badges">
+          <span class="chip chip-service">Service Admin</span>
+          <span class="chip chip-option">Option A · 36,5h</span>
+          <span class="chip chip-admin">★ Admin RH</span>
+        </div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:9px;color:rgba(255,255,255,0.5);">Ancienneté</div>
+        <div style="font-size:22px;font-weight:800;color:#fc8181;line-height:1.1">10 ans</div>
+        <div style="font-size:9px;color:rgba(255,255,255,0.4);">depuis 01/09/2015</div>
+      </div>
+    </div>
+
+    <div class="body">
+
+      <!-- Section 1: Coordonnées -->
+      <div class="section-label">📝 Mes coordonnées</div>
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-title">Informations personnelles</div>
+          <span class="badge-edit">✏️ Modifiable</span>
+        </div>
+        <div class="form">
+          <div class="form-row col-2">
+            <div class="form-group">
+              <label class="form-label">Prénom</label>
+              <input class="form-input green" value="Marie" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nom</label>
+              <input class="form-input green" value="Vandenberghe" />
+            </div>
+          </div>
+          <div class="form-row col-2">
+            <div class="form-group">
+              <label class="form-label">Téléphone</label>
+              <input class="form-input green" value="+32 498 12 34 56" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Date de naissance</label>
+              <input class="form-input green" value="15/04/1985" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Contact d'urgence (nom + téléphone)</label>
+            <input class="form-input green" value="Jean Vandenberghe — +32 477 98 76 54" />
+          </div>
+        </div>
+
+        <div class="addr-divider">Adresse de domicile</div>
+        <div class="form">
+          <div class="form-row col-3">
+            <div class="form-group">
+              <label class="form-label">Rue / Avenue / Place</label>
+              <input class="form-input green" value="Rue des Lilas" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Numéro</label>
+              <input class="form-input green" value="12" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Boîte</label>
+              <input class="form-input green" placeholder="Optionnel" />
+            </div>
+          </div>
+          <div class="form-row col-2b">
+            <div class="form-group">
+              <label class="form-label">Code postal</label>
+              <input class="form-input green" value="6800" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Commune</label>
+              <input class="form-input green" value="Libramont-Chevigny" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Pays</label>
+              <input class="form-input green" value="Belgique" />
+            </div>
+          </div>
+        </div>
+
+        <div class="addr-divider">Sécurité du compte</div>
+        <div class="form">
+          <div class="form-row col-2">
+            <div class="form-group">
+              <label class="form-label">Nouveau mot de passe</label>
+              <input class="form-input" type="password" placeholder="Laisser vide pour ne pas modifier" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirmer le mot de passe</label>
+              <input class="form-input" type="password" placeholder="••••••••" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Données RH -->
+      <div class="section-label">🏢 Données RH</div>
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-title">Informations contractuelles</div>
+          <span class="badge-lock">🔒 Admin uniquement</span>
+        </div>
+        <div class="rh-grid">
+          <div class="rh-item">
+            <div class="rh-label">Service</div>
+            <div class="rh-value">Service Administratif</div>
+          </div>
+          <div class="rh-item">
+            <div class="rh-label">Type de contrat</div>
+            <div class="rh-value">CDI — temps plein</div>
+          </div>
+          <div class="rh-item">
+            <div class="rh-label">Date d'entrée</div>
+            <div class="rh-value">01/09/2015</div>
+          </div>
+          <div class="rh-item">
+            <div class="rh-label">Option horaire</div>
+            <div class="rh-value accent">Option A · 36,5h/sem</div>
+          </div>
+          <div class="rh-item">
+            <div class="rh-label">Vacances annuelles</div>
+            <div class="rh-value">23 jours</div>
+          </div>
+          <div class="rh-item">
+            <div class="rh-label">Repos compensatoires</div>
+            <div class="rh-value">12 jours</div>
+          </div>
+          <div class="rh-item">
+            <div class="rh-label">Jours fériés légaux</div>
+            <div class="rh-value">10 jours</div>
+          </div>
+          <div class="rh-item">
+            <div class="rh-label">Ancienneté</div>
+            <div class="rh-value accent">10 ans 6 mois</div>
+          </div>
+          <div class="rh-item">
+            <div class="rh-label">Congé ancienneté</div>
+            <div class="rh-value">2 jours (≥ 10 ans)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: Affectation -->
+      <div class="section-label">📍 Affectation par bureau</div>
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-title">Planning hebdomadaire</div>
+          <span class="badge-lock">🔒 Admin uniquement</span>
+        </div>
+        <div class="bureau-wrap">
+          <table class="bureau-table">
+            <tr>
+              <th>Lundi</th><th>Mardi</th><th>Mercredi</th><th>Jeudi</th><th>Vendredi</th>
+            </tr>
+            <tr>
+              <td><span class="bc bc-lib">Libramont</span></td>
+              <td><span class="bc bc-lib">Libramont</span></td>
+              <td><span class="bc bc-mar">Marche</span></td>
+              <td><span class="bc bc-lib">Libramont</span></td>
+              <td><span class="bc bc-lib">Libramont</span></td>
+            </tr>
+          </table>
+          <div style="font-size:10px;color:#9ca3af;margin-top:8px;">Valable du 01/01/2026 · Toute modification doit être demandée à l'admin RH</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="save-bar">
+      <span class="save-note">Seules les coordonnées sont modifiables par vous</span>
+      <div>
+        <button class="btn-cancel">Annuler</button>
+        <button class="btn-save">💾 Enregistrer</button>
+      </div>
+    </div>
+
+  </div>
+</div>
