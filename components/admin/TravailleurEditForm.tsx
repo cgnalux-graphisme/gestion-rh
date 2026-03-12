@@ -72,7 +72,6 @@ export default function TravailleurEditForm({
 }) {
   const [state, action] = useFormState(updateTravailleurAction, null)
   const [serviceId, setServiceId] = useState(profile.service_id ?? '')
-  const [optionHoraire, setOptionHoraire] = useState(profile.option_horaire ?? '')
 
   return (
     <form action={action} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -103,45 +102,23 @@ export default function TravailleurEditForm({
           Données RH
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <Label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
-              Service
-            </Label>
-            <Select value={serviceId} onValueChange={(v) => setServiceId(v ?? '')}>
-              <SelectTrigger className="text-xs h-8">
-                <SelectValue placeholder="Service…" />
-              </SelectTrigger>
-              <SelectContent>
-                {services.map((s) => (
-                  <SelectItem key={s.id} value={s.id} className="text-xs">
-                    {s.nom}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <input type="hidden" name="service_id" value={serviceId} />
-          </div>
-
-          <div className="space-y-1">
-            <Label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
-              Option horaire
-            </Label>
-            <Select value={optionHoraire} onValueChange={(v) => setOptionHoraire(v ?? '')}>
-              <SelectTrigger className="text-xs h-8">
-                <SelectValue placeholder="Option…" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="A" className="text-xs">
-                  A — 36,5h/sem
+        <div className="space-y-1">
+          <Label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
+            Service
+          </Label>
+          <Select value={serviceId} onValueChange={(v) => setServiceId(v ?? '')}>
+            <SelectTrigger className="text-xs h-8">
+              <SelectValue placeholder="Service…" />
+            </SelectTrigger>
+            <SelectContent>
+              {services.map((s) => (
+                <SelectItem key={s.id} value={s.id} className="text-xs">
+                  {s.nom}
                 </SelectItem>
-                <SelectItem value="B" className="text-xs">
-                  B — 34h/sem
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <input type="hidden" name="option_horaire" value={optionHoraire} />
-          </div>
+              ))}
+            </SelectContent>
+          </Select>
+          <input type="hidden" name="service_id" value={serviceId} />
         </div>
 
         <div className="grid grid-cols-2 gap-3">

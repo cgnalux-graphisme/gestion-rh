@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Profile, Service, UserBureauSchedule, Bureau } from '@/types/database'
+import { Profile, Service, UserBureauSchedule, Bureau, PotHeures } from '@/types/database'
 import ProfileHeader from '@/components/profile/ProfileHeader'
 import TravailleurEditForm from '@/components/admin/TravailleurEditForm'
 import BureauScheduleEditor from '@/components/admin/BureauScheduleEditor'
+import OptionHoraireAdminSection from '@/components/admin/OptionHoraireAdminSection'
+import PotHeuresAdminSection from '@/components/admin/PotHeuresAdminSection'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { deactivateTravailleurAction } from '@/lib/auth/admin-actions'
@@ -53,7 +55,9 @@ export default async function TravailleurFichePage({
     .single()
   if (!myProfile?.is_admin_rh) redirect('/')
 
-  const [profileRes, schedulesRes, bureauxRes, servicesRes] = await Promise.all([
+  const annee = new Date().getFullYear()
+
+  const [profileRes, schedulesRes, bureauxRes, servicesRes, potHeuresRes] = await Promise.all([
     supabase.from('profiles').select('*, service:services(*)').eq('id', params.id).single(),
     supabase
       .from('user_bureau_schedule')
@@ -62,6 +66,12 @@ export default async function TravailleurFichePage({
       .order('jour'),
     supabase.from('bureaux').select('*').order('nom'),
     supabase.from('services').select('*').order('nom'),
+    supabase
+      .from('pot_heures')
+      .select('*')
+      .eq('user_id', params.id)
+      .eq('annee', annee)
+      .single(),
   ])
 
   if (profileRes.error || !profileRes.data) redirect('/admin/travailleurs')
@@ -70,6 +80,7 @@ export default async function TravailleurFichePage({
   const schedules = (schedulesRes.data ?? []) as UserBureauSchedule[]
   const bureaux = (bureauxRes.data ?? []) as Bureau[]
   const services = (servicesRes.data ?? []) as Service[]
+  const potHeures = potHeuresRes.data as PotHeures | null
 
   return (
     <div className="max-w-3xl mx-auto pb-8">
@@ -91,11 +102,13 @@ export default async function TravailleurFichePage({
 
       <div className="p-4 space-y-4">
         <TravailleurEditForm profile={profile} services={services} />
+        <OptionHoraireAdminSection profile={profile} />
         <BureauScheduleEditor
           userId={profile.id}
           bureaux={bureaux}
           schedules={schedules}
         />
+        <PotHeuresAdminSection userId={profile.id} potHeures={potHeures} />
       </div>
     </div>
   )
