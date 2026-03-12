@@ -55,7 +55,7 @@ export default function CongeApprouveEmail({
           )}
 
           <div style={{ textAlign: 'center', marginTop: 24 }}>
-            <Button href={`${appUrl}/conges`} style={{ background: '#e53e3e', color: '#fff', padding: '13px 28px', borderRadius: 8, fontWeight: 700, fontSize: 14, textDecoration: 'none', display: 'inline-block' }}>
+            <Button href={`${appUrl}/conges`} style={{ background: '#16a34a', color: '#fff', padding: '13px 28px', borderRadius: 8, fontWeight: 700, fontSize: 14, textDecoration: 'none', display: 'inline-block' }}>
               Voir mes congés
             </Button>
           </div>
