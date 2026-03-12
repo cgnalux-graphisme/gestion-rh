@@ -104,3 +104,35 @@ export type PotHeures = {
   solde_minutes: number
   updated_at: string
 }
+
+export type TypeConge = 'conge_annuel' | 'repos_comp' | 'maladie' | 'autre'
+export type StatutConge = 'en_attente' | 'approuve' | 'refuse'
+
+export type Conge = {
+  id: string
+  user_id: string
+  type: TypeConge
+  date_debut: string    // 'YYYY-MM-DD'
+  date_fin: string      // 'YYYY-MM-DD'
+  nb_jours: number
+  statut: StatutConge
+  commentaire_travailleur: string | null
+  commentaire_admin: string | null
+  piece_jointe_url: string | null
+  approuve_par: string | null
+  approuve_le: string | null
+  created_at: string
+  // joins optionnels
+  profile?: Pick<Profile, 'prenom' | 'nom' | 'email'>
+}
+
+export type SoldeConges = {
+  id: string
+  user_id: string
+  annee: number
+  conges_annuels_total: number
+  conges_annuels_pris: number
+  repos_comp_total: number
+  repos_comp_pris: number
+  updated_at: string
+}
