@@ -1,24 +1,23 @@
-import { Profile, Service, UserBureauSchedule, Bureau } from '@/types/database'
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
+import { Profile, Service, Pointage, DayStatusRecord, DayStatus } from '@/types/database'
+import { updateDayStatusAction } from '@/lib/pointage/admin-actions'
+import PointageManquantModal from '@/components/admin/PointageManquantModal'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
-type WorkerWithSchedules = Profile & {
-  service?: Service
-  schedules: UserBureauSchedule[]
-}
-
-function getWeekdaysOfMonth(year: number, month: number): Date[] {
-  const days: Date[] = []
-  const d = new Date(year, month - 1, 1)
-  while (d.getMonth() === month - 1) {
-    const dow = d.getDay()
-    if (dow >= 1 && dow <= 5) days.push(new Date(d))
-    d.setDate(d.getDate() + 1)
-  }
-  return days
-}
-
-function jourFromDate(d: Date): 1 | 2 | 3 | 4 | 5 {
-  return d.getDay() as 1 | 2 | 3 | 4 | 5
+interface Props {
+  workers: (Profile & { service?: Service })[]
+  year: number
+  month: number
+  allPointages: Pointage[]
+  allDayStatuses: DayStatusRecord[]
 }
 
 const MOIS_FR = [
@@ -26,51 +25,103 @@ const MOIS_FR = [
   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
 ]
 
+const STATUS_LABELS: Record<string, string> = {
+  P: 'Présent', C: 'Congé', M: 'Maladie', R: 'Récup.', F: 'Férié', A: 'Absent',
+}
+
+const STATUS_BG: Record<DayStatus, string> = {
+  P: 'bg-[#10b981] text-white',
+  C: 'bg-[#f59e0b] text-white',
+  M: 'bg-[#ef4444] text-white',
+  R: 'bg-[#6c63ff] text-white',
+  F: 'bg-[#6b7280] text-white',
+  A: 'bg-[#f97316] text-white',
+  '?': 'bg-white text-red-600 border border-red-400 border-dashed',
+  W: 'bg-gray-100 text-gray-300',
+  '-': 'bg-white text-gray-200',
+}
+
+function getAllWeekdays(year: number, month: number): Date[] {
+  const days: Date[] = []
+  const d = new Date(year, month - 1, 1)
+  while (d.getMonth() === month - 1) {
+    if (d.getDay() >= 1 && d.getDay() <= 5) days.push(new Date(d))
+    d.setDate(d.getDate() + 1)
+  }
+  return days
+}
+
+function computeStatus(
+  userId: string,
+  dateStr: string,
+  date: Date,
+  today: Date,
+  pointageMap: Record<string, Record<string, Pointage>>,
+  statusMap: Record<string, Record<string, DayStatusRecord>>
+): DayStatus {
+  const dow = date.getDay()
+  if (dow === 0 || dow === 6) return 'W'
+  if (date > today) return '-'
+
+  const ds = statusMap[userId]?.[dateStr]
+  if (ds) return ds.status as DayStatus
+
+  const p = pointageMap[userId]?.[dateStr]
+  if (p && p.arrivee && p.midi_out && p.midi_in && p.depart) return 'P'
+
+  return '?'
+}
+
 export default function RecapMensuel({
   workers,
   year,
   month,
-}: {
-  workers: WorkerWithSchedules[]
-  year: number
-  month: number
-}) {
-  const weekdays = getWeekdaysOfMonth(year, month)
+  allPointages,
+  allDayStatuses,
+}: Props) {
+  const weekdays = getAllWeekdays(year, month)
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const pointageMap: Record<string, Record<string, Pointage>> = {}
+  for (const p of allPointages) {
+    if (!pointageMap[p.user_id]) pointageMap[p.user_id] = {}
+    pointageMap[p.user_id][p.date] = p
+  }
+  const statusMap: Record<string, Record<string, DayStatusRecord>> = {}
+  for (const ds of allDayStatuses) {
+    if (!statusMap[ds.user_id]) statusMap[ds.user_id] = {}
+    statusMap[ds.user_id][ds.date] = ds
+  }
 
   const prevDate = new Date(year, month - 2, 1)
   const nextDate = new Date(year, month, 1)
   const prevParam = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`
   const nextParam = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`
 
-  // Group weekdays by week number for the sticky header weeks
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  const [modal, setModal] = useState<{ userId: string; date: string; workerName: string } | null>(null)
 
-  function getBureauLabel(worker: WorkerWithSchedules, date: Date): string {
-    const jour = jourFromDate(date)
-    const schedule = worker.schedules.find((s) => s.jour === jour)
-    if (!schedule) return '—'
-    const bureau = schedule.bureau as Bureau | undefined
-    return bureau?.code ?? bureau?.nom?.slice(0, 3).toUpperCase() ?? '?'
+  async function handleStatusChange(userId: string, date: string, status: 'P' | 'C' | 'M' | 'R' | 'F' | 'A') {
+    await updateDayStatusAction(userId, date, status)
   }
 
   return (
     <div className="max-w-full overflow-x-auto">
-      {/* Header navigation */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-bold text-[#1a2332]">
-          📅 Planning mensuel — {MOIS_FR[month - 1]} {year}
+          📅 Pointage mensuel — {MOIS_FR[month - 1]} {year}
         </h2>
         <div className="flex gap-2 items-center">
           <Link
             href={`/admin/recap?mois=${prevParam}`}
-            className="text-[10px] px-3 py-1.5 rounded-md bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+            className="text-[10px] px-3 py-1.5 rounded-md bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
           >
             ← Précédent
           </Link>
           <Link
             href={`/admin/recap?mois=${nextParam}`}
-            className="text-[10px] px-3 py-1.5 rounded-md bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+            className="text-[10px] px-3 py-1.5 rounded-md bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
           >
             Suivant →
           </Link>
@@ -95,9 +146,7 @@ export default function RecapMensuel({
                   return (
                     <th
                       key={d.toISOString()}
-                      className={`text-center px-1 py-2 font-medium w-10 min-w-[2.5rem] ${
-                        isToday ? 'bg-[#e53e3e]' : ''
-                      }`}
+                      className={`text-center px-1 py-2 font-medium w-10 min-w-[2.5rem] ${isToday ? 'bg-[#e53e3e]' : ''}`}
                     >
                       <div className="text-white/60 text-[8px]">{dow}</div>
                       <div>{d.getDate()}</div>
@@ -116,19 +165,62 @@ export default function RecapMensuel({
                     <div className="text-[8px] text-gray-400 truncate">{w.service?.nom}</div>
                   </td>
                   {weekdays.map((d) => {
-                    const label = getBureauLabel(w, d)
+                    const dateStr = d.toISOString().slice(0, 10)
                     const isToday = d.getTime() === today.getTime()
+                    const status = computeStatus(w.id, dateStr, d, today, pointageMap, statusMap)
+                    const bgClass = STATUS_BG[status]
+                    const isMissing = status === '?'
+                    const isPast = d <= today && d.getDay() >= 1 && d.getDay() <= 5
+
+                    const cell = (
+                      <span
+                        className={[
+                          'inline-flex items-center justify-center w-7 h-5 rounded text-[9px] font-bold',
+                          bgClass,
+                        ].join(' ')}
+                      >
+                        {status === '-' ? '' : status}
+                      </span>
+                    )
+
                     return (
                       <td
-                        key={d.toISOString()}
-                        className={`text-center px-1 py-2 ${isToday ? 'bg-red-50' : ''}`}
+                        key={dateStr}
+                        className={`text-center px-1 py-1.5 ${isToday ? 'bg-red-50' : ''}`}
                       >
-                        {label === '—' ? (
-                          <span className="text-gray-300">—</span>
+                        {isMissing ? (
+                          <button
+                            onClick={() =>
+                              setModal({
+                                userId: w.id,
+                                date: dateStr,
+                                workerName: `${w.prenom} ${w.nom}`,
+                              })
+                            }
+                            className="cursor-pointer"
+                            title="Pointage manquant — cliquer pour corriger"
+                          >
+                            {cell}
+                          </button>
+                        ) : isPast && status !== 'W' && status !== '-' ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger className="cursor-pointer" title="Changer le statut">
+                              {cell}
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="center" className="text-[10px]">
+                              {(['P', 'C', 'M', 'R', 'F', 'A'] as const).map((s) => (
+                                <DropdownMenuItem
+                                  key={s}
+                                  className="text-[10px]"
+                                  onClick={() => handleStatusChange(w.id, dateStr, s)}
+                                >
+                                  {STATUS_LABELS[s]}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         ) : (
-                          <span className="inline-block px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-700 font-bold text-[9px]">
-                            {label}
-                          </span>
+                          cell
                         )}
                       </td>
                     )
@@ -140,12 +232,26 @@ export default function RecapMensuel({
         </div>
       )}
 
-      <p className="text-[9px] text-gray-400 mt-3">
-        Les cases indiquent le code bureau d'affectation hebdomadaire du travailleur.{' '}
-        <Link href="/admin/travailleurs" className="underline hover:text-gray-600">
-          Gérer les affectations →
-        </Link>
-      </p>
+      <div className="flex flex-wrap gap-2 mt-3">
+        {Object.entries(STATUS_LABELS).map(([s, label]) => (
+          <div key={s} className="flex items-center gap-1">
+            <span className={`inline-flex w-5 h-4 rounded text-[8px] font-bold items-center justify-center ${STATUS_BG[s as DayStatus]}`}>
+              {s}
+            </span>
+            <span className="text-[9px] text-gray-500">{label}</span>
+          </div>
+        ))}
+      </div>
+
+      {modal && (
+        <PointageManquantModal
+          open={true}
+          onClose={() => setModal(null)}
+          userId={modal.userId}
+          date={modal.date}
+          workerName={modal.workerName}
+        />
+      )}
     </div>
   )
 }
