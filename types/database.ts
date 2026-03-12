@@ -58,3 +58,24 @@ export type InvitationToken = {
 }
 
 export type DayStatus = 'P' | 'C' | 'M' | 'R' | 'F' | 'A' | '?' | 'W' | '-'
+
+export type Pointage = {
+  id: string
+  user_id: string
+  date: string          // 'YYYY-MM-DD'
+  arrivee: string | null   // ISO timestamptz
+  midi_out: string | null
+  midi_in: string | null
+  depart: string | null
+  created_at: string
+}
+
+export type DayStatusRecord = {
+  id: string
+  user_id: string
+  date: string          // 'YYYY-MM-DD'
+  status: 'P' | 'C' | 'M' | 'R' | 'F' | 'A'
+  commentaire: string | null
+  corrige_par: string | null
+  created_at: string
+}
