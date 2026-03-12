@@ -74,7 +74,7 @@ export default function BureauScheduleEditor({
             <div className="flex-1">
               <Select
                 value={selections[jour] || NONE}
-                onValueChange={(v) => handleChange(jour, v)}
+                onValueChange={(v) => handleChange(jour, v ?? '')}
               >
                 <SelectTrigger className="text-xs h-8">
                   <SelectValue />

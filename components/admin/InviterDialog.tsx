@@ -51,10 +51,10 @@ export default function InviterDialog({ services }: { services: Service[] }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="bg-[#e53e3e] hover:bg-[#c53030] text-white text-xs">
-          + Inviter un travailleur
-        </Button>
+      <DialogTrigger
+        render={<Button className="bg-[#e53e3e] hover:bg-[#c53030] text-white text-xs" />}
+      >
+        + Inviter un travailleur
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
@@ -89,7 +89,7 @@ export default function InviterDialog({ services }: { services: Service[] }) {
             <Label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
               Service *
             </Label>
-            <Select value={serviceId} onValueChange={setServiceId} required>
+            <Select value={serviceId} onValueChange={(v) => setServiceId(v ?? '')} required>
               <SelectTrigger className="text-xs h-8">
                 <SelectValue placeholder="Choisir un service…" />
               </SelectTrigger>
@@ -109,7 +109,7 @@ export default function InviterDialog({ services }: { services: Service[] }) {
               <Label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
                 Option horaire *
               </Label>
-              <Select value={optionHoraire} onValueChange={setOptionHoraire} required>
+              <Select value={optionHoraire} onValueChange={(v) => setOptionHoraire(v ?? '')} required>
                 <SelectTrigger className="text-xs h-8">
                   <SelectValue placeholder="Option…" />
                 </SelectTrigger>

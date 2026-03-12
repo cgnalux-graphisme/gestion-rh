@@ -108,7 +108,7 @@ export default function TravailleurEditForm({
             <Label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
               Service
             </Label>
-            <Select value={serviceId} onValueChange={setServiceId}>
+            <Select value={serviceId} onValueChange={(v) => setServiceId(v ?? '')}>
               <SelectTrigger className="text-xs h-8">
                 <SelectValue placeholder="Service…" />
               </SelectTrigger>
@@ -127,7 +127,7 @@ export default function TravailleurEditForm({
             <Label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
               Option horaire
             </Label>
-            <Select value={optionHoraire} onValueChange={setOptionHoraire}>
+            <Select value={optionHoraire} onValueChange={(v) => setOptionHoraire(v ?? '')}>
               <SelectTrigger className="text-xs h-8">
                 <SelectValue placeholder="Option…" />
               </SelectTrigger>

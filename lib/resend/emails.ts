@@ -3,16 +3,18 @@ import InvitationEmail from '@/emails/InvitationEmail'
 import ResetPasswordEmail from '@/emails/ResetPasswordEmail'
 import WelcomeEmail from '@/emails/WelcomeEmail'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-const FROM = process.env.RESEND_FROM!
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL!
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY)
+}
 
 export async function sendInvitationEmail(params: {
   email: string
   prenom: string
   otpCode: string
 }) {
-  return resend.emails.send({
+  const FROM = process.env.RESEND_FROM!
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL!
+  return getResend().emails.send({
     from: FROM,
     to: params.email,
     subject: 'Votre invitation — Portail RH ACCG',
@@ -29,7 +31,8 @@ export async function sendResetPasswordEmail(params: {
   prenom: string
   otpCode: string
 }) {
-  return resend.emails.send({
+  const FROM = process.env.RESEND_FROM!
+  return getResend().emails.send({
     from: FROM,
     to: params.email,
     subject: 'Réinitialisation de votre mot de passe',
@@ -41,7 +44,9 @@ export async function sendResetPasswordEmail(params: {
 }
 
 export async function sendWelcomeEmail(params: { email: string; prenom: string }) {
-  return resend.emails.send({
+  const FROM = process.env.RESEND_FROM!
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL!
+  return getResend().emails.send({
     from: FROM,
     to: params.email,
     subject: 'Bienvenue sur le portail RH ACCG',

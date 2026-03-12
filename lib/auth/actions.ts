@@ -22,7 +22,7 @@ export async function signIn(_prev: unknown, formData: FormData) {
     password: formData.get('password') as string,
   })
   if (error) return { error: 'Email ou mot de passe incorrect.' }
-  redirect('/')
+  redirect('/profil')
 }
 
 // --- Déconnexion ---
@@ -155,7 +155,7 @@ export async function activateAccount(_prev: unknown, formData: FormData) {
   const supabase = createClient()
   await supabase.auth.signInWithPassword({ email, password })
 
-  redirect('/')
+  redirect('/profil')
 }
 
 // --- Mot de passe oublié ---
