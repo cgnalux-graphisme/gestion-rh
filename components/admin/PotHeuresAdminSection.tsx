@@ -76,33 +76,20 @@ export default function PotHeuresAdminSection({
             Correction manuelle
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
-                Delta (minutes)
-              </Label>
-              <Input
-                name="delta_minutes"
-                type="number"
-                placeholder="ex: 30 ou -60"
-                className="text-xs h-8"
-                required
-              />
-              <p className="text-[9px] text-gray-400">
-                Positif = ajouter, négatif = soustraire
-              </p>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
-                Commentaire (mémo)
-              </Label>
-              <Input
-                name="commentaire"
-                type="text"
-                placeholder="Raison de la correction…"
-                className="text-xs h-8"
-              />
-            </div>
+          <div className="space-y-1 max-w-xs">
+            <Label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
+              Delta (minutes)
+            </Label>
+            <Input
+              name="delta_minutes"
+              type="number"
+              placeholder="ex: 30 ou -60"
+              className="text-xs h-8"
+              required
+            />
+            <p className="text-[9px] text-gray-400">
+              Positif = ajouter, négatif = soustraire
+            </p>
           </div>
 
           {state?.error && (

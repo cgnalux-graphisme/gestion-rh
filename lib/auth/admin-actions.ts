@@ -4,6 +4,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { inviteWorker } from '@/lib/auth/actions'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { isApresDeadlineChangementOption } from '@/lib/horaires/utils'
 
 async function assertAdmin() {
   const supabase = createClient()
@@ -113,8 +114,7 @@ export async function updateOptionHoraireAction(
 
   const admin = createAdminClient()
   const today = new Date()
-  // Deadline : après le 15 décembre → seule l'année suivante est modifiable
-  const isApresDeadline = today.getMonth() === 11 && today.getDate() > 15
+  const isApresDeadline = isApresDeadlineChangementOption(today)
 
   if (isApresDeadline) {
     const { error } = await admin

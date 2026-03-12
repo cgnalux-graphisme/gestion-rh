@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Profile, Service, UserBureauSchedule, Bureau, PotHeures } from '@/types/database'
 import ProfileHeader from '@/components/profile/ProfileHeader'
@@ -56,6 +56,7 @@ export default async function TravailleurFichePage({
   if (!myProfile?.is_admin_rh) redirect('/')
 
   const annee = new Date().getFullYear()
+  const admin = createAdminClient()
 
   const [profileRes, schedulesRes, bureauxRes, servicesRes, potHeuresRes] = await Promise.all([
     supabase.from('profiles').select('*, service:services(*)').eq('id', params.id).single(),
@@ -66,7 +67,7 @@ export default async function TravailleurFichePage({
       .order('jour'),
     supabase.from('bureaux').select('*').order('nom'),
     supabase.from('services').select('*').order('nom'),
-    supabase
+    admin
       .from('pot_heures')
       .select('*')
       .eq('user_id', params.id)
