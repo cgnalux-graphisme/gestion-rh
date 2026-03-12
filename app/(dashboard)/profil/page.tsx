@@ -4,6 +4,7 @@ import ProfileHeader from '@/components/profile/ProfileHeader'
 import CoordonneesSection from '@/components/profile/CoordonneesSection'
 import DonneesRHSection from '@/components/profile/DonneesRHSection'
 import AffectationSection from '@/components/profile/AffectationSection'
+import HorairesSection from '@/components/profile/HorairesSection'
 import { Profile, Service, UserBureauSchedule } from '@/types/database'
 
 export default async function ProfilPage() {
@@ -39,6 +40,7 @@ export default async function ProfilPage() {
         <CoordonneesSection profile={profile} />
         <DonneesRHSection profile={profile} service={profile.service ?? null} />
         <AffectationSection schedules={schedules} />
+        <HorairesSection profile={profile} schedules={schedules} />
       </div>
     </div>
   )

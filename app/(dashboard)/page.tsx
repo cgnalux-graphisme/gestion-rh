@@ -1,8 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getTodayPointage } from '@/lib/pointage/actions'
+import { getSoldeHeuresAction } from '@/lib/pot-heures/actions'
 import { UserBureauSchedule, Bureau } from '@/types/database'
 import PointageWidget from '@/components/dashboard/PointageWidget'
+import SoldeHeuresWidget from '@/components/dashboard/SoldeHeuresWidget'
 
 export default async function DashboardPage() {
   const supabase = createClient()
@@ -12,7 +14,7 @@ export default async function DashboardPage() {
   const today = new Date()
   const dow = today.getDay()
 
-  const [pointage, schedulesRes] = await Promise.all([
+  const [pointage, schedulesRes, soldeData] = await Promise.all([
     getTodayPointage(),
     supabase
       .from('user_bureau_schedule')
@@ -20,6 +22,7 @@ export default async function DashboardPage() {
       .eq('user_id', user.id)
       .eq('jour', dow)
       .single(),
+    getSoldeHeuresAction(),
   ])
 
   const bureauDuJour = schedulesRes.data as (UserBureauSchedule & { bureau: Bureau }) | null
@@ -41,15 +44,7 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">
-          ⏱ Solde heures
-        </p>
-        <p className="text-2xl font-black text-[#1a2332]">
-          0<span className="text-sm font-normal text-gray-400 ml-1">h</span>
-        </p>
-        <p className="text-[9px] text-gray-400 mt-1">Calcul disponible en Module 3</p>
-      </div>
+      <SoldeHeuresWidget solde={soldeData?.solde_minutes ?? null} />
     </div>
   )
 }
