@@ -7,12 +7,28 @@ export type Service = {
   code: ServiceCode
 }
 
+// Structure d'une journée dans les horaires bureau
+export type HorairesJour = {
+  ouverture: string   // 'HH:mm'
+  fermeture: string   // 'HH:mm'
+  pause_midi: number  // minutes
+}
+
+// Map jours 1–5 (lundi–vendredi) → HorairesJour
+export type HorairesHebdo = {
+  '1': HorairesJour
+  '2': HorairesJour
+  '3': HorairesJour
+  '4': HorairesJour
+  '5': HorairesJour
+}
+
 export type Bureau = {
   id: string
   nom: string
   code: string
-  horaires_normaux: Record<string, unknown>
-  horaires_ete: Record<string, unknown>
+  horaires_normaux: HorairesHebdo
+  horaires_ete: HorairesHebdo
 }
 
 export type Profile = {
@@ -33,6 +49,7 @@ export type Profile = {
   type_contrat: string | null
   date_entree: string | null
   option_horaire: OptionHoraire | null
+  option_horaire_prochaine: OptionHoraire | null
   is_admin_rh: boolean
   is_active: boolean
   created_at: string
@@ -78,4 +95,44 @@ export type DayStatusRecord = {
   commentaire: string | null
   corrige_par: string | null
   created_at: string
+}
+
+export type PotHeures = {
+  id: string
+  user_id: string
+  annee: number
+  solde_minutes: number
+  updated_at: string
+}
+
+export type TypeConge = 'conge_annuel' | 'repos_comp' | 'maladie' | 'autre'
+export type StatutConge = 'en_attente' | 'approuve' | 'refuse'
+
+export type Conge = {
+  id: string
+  user_id: string
+  type: TypeConge
+  date_debut: string    // 'YYYY-MM-DD'
+  date_fin: string      // 'YYYY-MM-DD'
+  nb_jours: number
+  statut: StatutConge
+  commentaire_travailleur: string | null
+  commentaire_admin: string | null
+  piece_jointe_url: string | null
+  approuve_par: string | null
+  approuve_le: string | null
+  created_at: string
+  // joins optionnels
+  profile?: Pick<Profile, 'prenom' | 'nom' | 'email'>
+}
+
+export type SoldeConges = {
+  id: string
+  user_id: string
+  annee: number
+  conges_annuels_total: number
+  conges_annuels_pris: number
+  repos_comp_total: number
+  repos_comp_pris: number
+  updated_at: string
 }

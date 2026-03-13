@@ -18,7 +18,7 @@ const adminLinks = [
   { href: '/', icon: '🏠', label: 'Accueil' },
   { href: '/admin/travailleurs', icon: '👥', label: 'Travailleurs' },
   { href: '/pointage', icon: '⏱', label: 'Pointage' },
-  { href: '/conges', icon: '🌴', label: 'Congés' },
+  { href: '/admin/conges', icon: '🌴', label: 'Congés RH' },
   { href: '/calendrier', icon: '📅', label: 'Calendrier' },
   { href: '/admin/recap', icon: '📊', label: 'Rapports' },
 ]

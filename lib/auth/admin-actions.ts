@@ -4,6 +4,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { inviteWorker } from '@/lib/auth/actions'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { isApresDeadlineChangementOption } from '@/lib/horaires/utils'
 
 async function assertAdmin() {
   const supabase = createClient()
@@ -60,7 +61,6 @@ export async function updateTravailleurAction(_prev: unknown, formData: FormData
       nom: formData.get('nom') as string,
       email: formData.get('email') as string,
       service_id: formData.get('service_id') as string,
-      option_horaire: formData.get('option_horaire') as 'A' | 'B',
       type_contrat: (formData.get('type_contrat') as string) || null,
       date_entree: (formData.get('date_entree') as string) || null,
       telephone: (formData.get('telephone') as string) || null,
@@ -100,5 +100,75 @@ export async function setBureauScheduleAction(_prev: unknown, formData: FormData
   }
   revalidatePath(`/admin/travailleurs/${userId}`)
   revalidatePath('/admin/recap')
+  return { success: true }
+}
+
+export async function updateOptionHoraireAction(
+  _prev: unknown,
+  formData: FormData
+): Promise<{ error?: string; success?: boolean; warning?: string }> {
+  await assertAdmin()
+  const userId = formData.get('user_id') as string
+  const newOption = formData.get('option_horaire') as 'A' | 'B'
+  if (!userId || !newOption) return { error: 'Paramètres manquants' }
+
+  const admin = createAdminClient()
+  const today = new Date()
+  const isApresDeadline = isApresDeadlineChangementOption(today)
+
+  if (isApresDeadline) {
+    const { error } = await admin
+      .from('profiles')
+      .update({ option_horaire_prochaine: newOption })
+      .eq('id', userId)
+    if (error) return { error: error.message }
+    revalidatePath(`/admin/travailleurs/${userId}`)
+    return {
+      success: true,
+      warning: `Après le 15 décembre, le changement est planifié pour ${today.getFullYear() + 1}. L'option actuelle reste inchangée jusqu'au 1er janvier.`,
+    }
+  }
+
+  // Cas normal : mettre à jour option_horaire + effacer option_horaire_prochaine
+  const { error } = await admin
+    .from('profiles')
+    .update({ option_horaire: newOption, option_horaire_prochaine: null })
+    .eq('id', userId)
+  if (error) return { error: error.message }
+
+  // Recalculer le pot_heures de l'année courante (les heures théoriques ont changé)
+  await admin.rpc('recalculer_pot_heures_annee', {
+    p_user_id: userId,
+    p_annee: today.getFullYear(),
+  })
+
+  revalidatePath(`/admin/travailleurs/${userId}`)
+  return { success: true }
+}
+
+export async function correcterPotHeuresAction(
+  _prev: unknown,
+  formData: FormData
+): Promise<{ error?: string; success?: boolean }> {
+  await assertAdmin()
+  const userId = formData.get('user_id') as string
+  const deltaStr = formData.get('delta_minutes') as string
+  const anneeStr = formData.get('annee') as string
+  if (!userId || !deltaStr || !anneeStr) return { error: 'Paramètres manquants' }
+
+  const delta = parseInt(deltaStr, 10)
+  const annee = parseInt(anneeStr, 10)
+  if (isNaN(delta) || isNaN(annee)) return { error: 'Valeurs invalides' }
+  if (delta === 0) return { error: 'La correction doit être non-nulle' }
+
+  const admin = createAdminClient()
+  const { error } = await admin.rpc('corriger_pot_heures_admin', {
+    p_user_id: userId,
+    p_annee: annee,
+    p_delta_minutes: delta,
+  })
+  if (error) return { error: error.message }
+
+  revalidatePath(`/admin/travailleurs/${userId}`)
   return { success: true }
 }
