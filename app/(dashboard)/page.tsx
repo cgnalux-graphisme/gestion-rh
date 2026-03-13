@@ -5,6 +5,8 @@ import { getSoldeHeuresAction } from '@/lib/pot-heures/actions'
 import { UserBureauSchedule, Bureau } from '@/types/database'
 import PointageWidget from '@/components/dashboard/PointageWidget'
 import SoldeHeuresWidget from '@/components/dashboard/SoldeHeuresWidget'
+import CongesEnAttenteWidget from '@/components/admin/CongesEnAttenteWidget'
+import { getCongesEnAttenteAdmin } from '@/lib/conges/admin-actions'
 
 export default async function DashboardPage() {
   const supabase = createClient()
@@ -14,7 +16,7 @@ export default async function DashboardPage() {
   const today = new Date()
   const dow = today.getDay()
 
-  const [pointage, schedulesRes, soldeData] = await Promise.all([
+  const [pointage, schedulesRes, soldeData, profileRes] = await Promise.all([
     getTodayPointage(),
     supabase
       .from('user_bureau_schedule')
@@ -23,9 +25,14 @@ export default async function DashboardPage() {
       .eq('jour', dow)
       .single(),
     getSoldeHeuresAction(),
+    supabase.from('profiles').select('is_admin_rh').eq('id', user.id).single(),
   ])
 
   const bureauDuJour = schedulesRes.data as (UserBureauSchedule & { bureau: Bureau }) | null
+  const isAdmin = profileRes.data?.is_admin_rh ?? false
+
+  // Congés en attente — uniquement si admin
+  const congesEnAttente = isAdmin ? await getCongesEnAttenteAdmin() : []
 
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-4">
@@ -45,6 +52,8 @@ export default async function DashboardPage() {
       </div>
 
       <SoldeHeuresWidget solde={soldeData?.solde_minutes ?? null} />
+
+      {isAdmin && <CongesEnAttenteWidget conges={congesEnAttente} />}
     </div>
   )
 }
