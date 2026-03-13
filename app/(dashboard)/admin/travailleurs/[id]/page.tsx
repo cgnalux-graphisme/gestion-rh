@@ -6,6 +6,8 @@ import TravailleurEditForm from '@/components/admin/TravailleurEditForm'
 import BureauScheduleEditor from '@/components/admin/BureauScheduleEditor'
 import OptionHoraireAdminSection from '@/components/admin/OptionHoraireAdminSection'
 import PotHeuresAdminSection from '@/components/admin/PotHeuresAdminSection'
+import SoldesCongesAdminSection from '@/components/admin/SoldesCongesAdminSection'
+import { getSoldesCongesWorkerAdmin } from '@/lib/conges/admin-actions'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { deactivateTravailleurAction } from '@/lib/auth/admin-actions'
@@ -58,7 +60,7 @@ export default async function TravailleurFichePage({
   const annee = new Date().getFullYear()
   const admin = createAdminClient()
 
-  const [profileRes, schedulesRes, bureauxRes, servicesRes, potHeuresRes] = await Promise.all([
+  const [profileRes, schedulesRes, bureauxRes, servicesRes, potHeuresRes, soldesCongesRes] = await Promise.all([
     supabase.from('profiles').select('*, service:services(*)').eq('id', params.id).single(),
     supabase
       .from('user_bureau_schedule')
@@ -73,6 +75,7 @@ export default async function TravailleurFichePage({
       .eq('user_id', params.id)
       .eq('annee', annee)
       .single(),
+    getSoldesCongesWorkerAdmin(params.id, annee),
   ])
 
   if (profileRes.error || !profileRes.data) redirect('/admin/travailleurs')
@@ -82,6 +85,7 @@ export default async function TravailleurFichePage({
   const bureaux = (bureauxRes.data ?? []) as Bureau[]
   const services = (servicesRes.data ?? []) as Service[]
   const potHeures = potHeuresRes.data as PotHeures | null
+  const soldesConges = soldesCongesRes
 
   return (
     <div className="max-w-3xl mx-auto pb-8">
@@ -110,6 +114,7 @@ export default async function TravailleurFichePage({
           schedules={schedules}
         />
         <PotHeuresAdminSection userId={profile.id} potHeures={potHeures} />
+        <SoldesCongesAdminSection userId={profile.id} soldes={soldesConges} annee={annee} />
       </div>
     </div>
   )
