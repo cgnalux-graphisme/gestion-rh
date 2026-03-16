@@ -1,5 +1,3 @@
-import type { Service, Bureau } from './database'
-
 export type StatutJour =
   | 'present'
   | 'absent'
@@ -27,6 +25,6 @@ export type CalendrierFiltresProps = {
   date: string
   serviceId?: string
   bureauId?: string
-  services: Service[]
-  bureaux: Bureau[]
+  services: { id: string; nom: string }[]
+  bureaux: { id: string; nom: string }[]
 }
