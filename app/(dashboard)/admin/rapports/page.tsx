@@ -7,6 +7,7 @@ import TauxPresenceChart from '@/components/rapports/TauxPresenceChart'
 import AbsencesParTypeChart from '@/components/rapports/AbsencesParTypeChart'
 import TopAbsences from '@/components/rapports/TopAbsences'
 import PotHeuresChart from '@/components/rapports/PotHeuresChart'
+import ExportsSection from '@/components/rapports/ExportsSection'
 import type { PeriodeType } from '@/types/rapports'
 
 export default async function RapportsPage({
@@ -71,8 +72,13 @@ export default async function RapportsPage({
         <PotHeuresChart potHeures={stats.potHeures} />
       </div>
 
-      {/* Section Exports — placeholder, sera implémenté dans le Chunk 3 */}
-      <div id="exports" />
+      {/* Section Exports */}
+      <ExportsSection
+        periodeType={periodeType}
+        periodeDate={periodeDate}
+        serviceId={serviceId}
+        bureauId={bureauId}
+      />
     </div>
   )
 }
