@@ -20,7 +20,7 @@ const adminLinks = [
   { href: '/pointage', icon: '⏱', label: 'Pointage' },
   { href: '/admin/conges', icon: '🌴', label: 'Congés RH' },
   { href: '/admin/calendrier', icon: '📅', label: 'Calendrier' },
-  { href: '/admin/recap', icon: '📊', label: 'Rapports' },
+  { href: '/admin/rapports', icon: '📊', label: 'Rapports' },
 ]
 
 interface Props {
