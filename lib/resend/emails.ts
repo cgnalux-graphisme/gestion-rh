@@ -4,6 +4,7 @@ import ResetPasswordEmail from '@/emails/ResetPasswordEmail'
 import WelcomeEmail from '@/emails/WelcomeEmail'
 import CongeApprouveEmail from '@/emails/CongeApprouveEmail'
 import CongeRefuseEmail from '@/emails/CongeRefuseEmail'
+import ReassignationEmail from '@/emails/ReassignationEmail'
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY)
@@ -87,4 +88,34 @@ export async function sendCongeDecisionEmail(params: {
       ? CongeApprouveEmail(commonProps)
       : CongeRefuseEmail(commonProps),
   })
+}
+
+export async function sendReassignationEmail(params: {
+  email: string
+  prenom: string
+  bureauNom: string
+  date: string
+  raisonPrenom: string
+  raisonNom: string
+}) {
+  try {
+    const FROM = process.env.RESEND_FROM!
+    const APP_URL = process.env.NEXT_PUBLIC_APP_URL!
+    return await getResend().emails.send({
+      from: FROM,
+      to: params.email,
+      subject: `Demande de réaffectation — Bureau ${params.bureauNom} le ${params.date}`,
+      react: ReassignationEmail({
+        prenom: params.prenom,
+        bureauNom: params.bureauNom,
+        date: params.date,
+        raisonPrenom: params.raisonPrenom,
+        raisonNom: params.raisonNom,
+        appUrl: APP_URL,
+      }),
+    })
+  } catch (err) {
+    console.error('[sendReassignationEmail] Erreur envoi email:', err)
+    return null
+  }
 }

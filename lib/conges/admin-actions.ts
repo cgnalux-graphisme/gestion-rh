@@ -5,7 +5,9 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { Conge, SoldeConges, Profile } from '@/types/database'
 import { getJoursOuvrables } from '@/lib/utils/dates'
-import { sendCongeDecisionEmail } from '@/lib/resend/emails'
+import { sendCongeDecisionEmail, sendReassignationEmail } from '@/lib/resend/emails'
+import { formatDateFr } from '@/lib/utils/dates'
+import { logAudit } from '@/lib/audit/logger'
 
 async function assertAdmin() {
   const supabase = createClient()
@@ -89,23 +91,44 @@ export async function updateSoldesCongesAction(
   _prev: unknown,
   formData: FormData
 ): Promise<{ error?: string; success?: boolean }> {
-  await assertAdmin()
+  const adminUser = await assertAdmin()
   const userId = formData.get('user_id') as string
   const anneeStr = formData.get('annee') as string
   const caTotal = parseInt(formData.get('conges_annuels_total') as string, 10)
   const rcTotal = parseInt(formData.get('repos_comp_total') as string, 10)
+  const reliquatCA = parseInt(formData.get('reliquat_conges_annuels') as string, 10) || 0
+  const reliquatRC = parseInt(formData.get('reliquat_repos_comp') as string, 10) || 0
 
   if (!userId || !anneeStr) return { error: 'Paramètres manquants' }
   if (isNaN(caTotal) || isNaN(rcTotal)) return { error: 'Valeurs invalides' }
-  if (caTotal < 0 || rcTotal < 0) return { error: 'Les soldes ne peuvent pas être négatifs' }
+  if (caTotal < 0 || rcTotal < 0 || reliquatCA < 0 || reliquatRC < 0) return { error: 'Les soldes ne peuvent pas être négatifs' }
 
   const annee = parseInt(anneeStr, 10)
   const admin = createAdminClient()
   const { error } = await admin.from('soldes_conges').upsert(
-    { user_id: userId, annee, conges_annuels_total: caTotal, repos_comp_total: rcTotal, updated_at: new Date().toISOString() },
+    {
+      user_id: userId,
+      annee,
+      conges_annuels_total: caTotal,
+      repos_comp_total: rcTotal,
+      reliquat_conges_annuels: reliquatCA,
+      reliquat_repos_comp: reliquatRC,
+      updated_at: new Date().toISOString(),
+    },
     { onConflict: 'user_id,annee' }
   )
   if (error) return { error: error.message }
+
+  const commentaire = (formData.get('commentaire_admin') as string) || null
+  await logAudit({
+    targetUserId: userId,
+    actorUserId: adminUser.id,
+    action: 'conges.soldes_modifies',
+    category: 'conges',
+    description: `Soldes congés ${annee} modifiés: CA=${caTotal}, RC=${rcTotal}`,
+    metadata: { annee, conges_annuels_total: caTotal, repos_comp_total: rcTotal, reliquat_ca: reliquatCA, reliquat_rc: reliquatRC },
+    commentaire,
+  })
 
   revalidatePath(`/admin/travailleurs/${userId}`)
   return { success: true }
@@ -136,6 +159,7 @@ export async function traiterCongeAction(
     commentaire_admin: commentaire_admin ?? null,
     approuve_par: adminUser.id,
     approuve_le: new Date().toISOString(),
+    vu_par_travailleur: false,
   }).eq('id', id)
   if (updateError) return { error: updateError.message }
 
@@ -164,10 +188,42 @@ export async function traiterCongeAction(
       }
     }
 
+    // Si récupération : déduire du pot d'heures (nb_jours * minutes théoriques/jour)
+    if (conge.type === 'recuperation') {
+      // Récupérer l'option horaire du travailleur
+      const { data: workerProfile } = await admin
+        .from('profiles')
+        .select('option_horaire')
+        .eq('id', conge.user_id)
+        .single()
+
+      const option = workerProfile?.option_horaire ?? 'B'
+      const minutesParJourVal = option === 'A' ? 438 : 408
+      const minutesADeduire = conge.nb_jours * minutesParJourVal
+
+      const { data: pot } = await admin
+        .from('pot_heures')
+        .select('solde_minutes')
+        .eq('user_id', conge.user_id)
+        .eq('annee', annee)
+        .single()
+
+      if (pot) {
+        await admin
+          .from('pot_heures')
+          .update({
+            solde_minutes: pot.solde_minutes - minutesADeduire,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', conge.user_id)
+          .eq('annee', annee)
+      }
+    }
+
     // Écrire les day_statuses pour chaque jour ouvrable du congé
     const statusCode: 'C' | 'M' | 'R' =
       conge.type === 'maladie' ? 'M' :
-      conge.type === 'repos_comp' ? 'R' : 'C'
+      (conge.type === 'repos_comp' || conge.type === 'recuperation') ? 'R' : 'C'
 
     const joursOuvrables = getJoursOuvrables(conge.date_debut, conge.date_fin)
     if (joursOuvrables.length > 0) {
@@ -197,8 +253,99 @@ export async function traiterCongeAction(
     }).catch(() => {/* email non-bloquant */})
   }
 
+  await logAudit({
+    targetUserId: conge.user_id,
+    actorUserId: adminUser.id,
+    action: `conge.${decision}`,
+    category: 'conges',
+    description: `Congé ${decision === 'approuve' ? 'approuvé' : 'refusé'}: ${conge.type} du ${conge.date_debut} au ${conge.date_fin} (${conge.nb_jours}j)`,
+    metadata: { type: conge.type, date_debut: conge.date_debut, date_fin: conge.date_fin, nb_jours: conge.nb_jours, decision },
+    commentaire: commentaire_admin,
+  })
+
   revalidatePath('/admin/conges')
   revalidatePath('/conges')
   revalidatePath('/admin/recap')
+  return { success: true }
+}
+
+/** Crée une réaffectation temporaire pour couvrir un congé */
+export async function creerReassignation(
+  congeId: string,
+  travailleurId: string,
+  bureauId: string,
+  date: string
+): Promise<{ error?: string; success?: boolean }> {
+  const adminUser = await assertAdmin()
+  const admin = createAdminClient()
+
+  // Récupérer le congé avec le profil du demandeur
+  const { data: conge } = await admin
+    .from('conges')
+    .select('*, profile:profiles!user_id(prenom, nom)')
+    .eq('id', congeId)
+    .single()
+  if (!conge) return { error: 'Congé introuvable' }
+
+  // Récupérer le profil du travailleur à réaffecter
+  const { data: travailleur } = await admin
+    .from('profiles')
+    .select('prenom, nom, email')
+    .eq('id', travailleurId)
+    .single()
+  if (!travailleur) return { error: 'Travailleur introuvable' }
+
+  // Récupérer le nom du bureau
+  const { data: bureau } = await admin
+    .from('bureaux')
+    .select('nom')
+    .eq('id', bureauId)
+    .single()
+  if (!bureau) return { error: 'Bureau introuvable' }
+
+  // Insérer la réaffectation
+  const { error: insertError } = await admin
+    .from('reassignations_temporaires')
+    .insert({
+      conge_id: congeId,
+      travailleur_id: travailleurId,
+      bureau_id: bureauId,
+      date,
+      statut: 'en_attente',
+      vu_par_travailleur: false,
+      cree_par: adminUser.id,
+    })
+
+  if (insertError) {
+    if (insertError.code === '23505') {
+      return { error: 'Une réaffectation existe déjà pour ce travailleur à cette date et ce bureau' }
+    }
+    return { error: insertError.message }
+  }
+
+  const congeProfile = conge.profile as { prenom: string; nom: string } | null
+
+  await logAudit({
+    targetUserId: travailleurId,
+    actorUserId: adminUser.id,
+    action: 'reassignation.creation',
+    category: 'admin',
+    description: `Réaffectation créée: ${travailleur.prenom} ${travailleur.nom} → ${bureau.nom} le ${formatDateFr(date)}`,
+    metadata: { conge_id: congeId, bureau_id: bureauId, date },
+  })
+
+  // Email non-bloquant
+  if (travailleur.email) {
+    sendReassignationEmail({
+      email: travailleur.email,
+      prenom: travailleur.prenom,
+      bureauNom: bureau.nom,
+      date: formatDateFr(date),
+      raisonPrenom: congeProfile?.prenom ?? '',
+      raisonNom: congeProfile?.nom ?? '',
+    }).catch(() => {/* email non-bloquant */})
+  }
+
+  revalidatePath('/admin/conges')
   return { success: true }
 }
