@@ -52,7 +52,8 @@ Afficher **tous les soldes** du travailleur pour l'année en cours :
 Pour **chaque jour ouvrable** de la période demandée :
 
 - Identifier le bureau affecté au demandeur ce jour-là (via `user_bureau_schedule` pour le `jour` correspondant au jour de la semaine)
-- Lister tous les travailleurs normalement affectés au même `bureau_id` ce jour-là (tous secteurs/services confondus)
+- Lister tous les travailleurs **actifs** (`is_active = true`) normalement affectés au même `bureau_id` ce jour-là (tous secteurs/services confondus)
+- **Exclure les travailleurs en jour off** : vérifier `regime_travail.jour_off` via `getRegimeActif()` — un travailleur dont le `jour_off` correspond au jour de la semaine n'est pas comptabilisé comme "affecté"
 - Pour chacun, afficher son statut :
   - ✅ Présent (pas d'entrée dans `day_statuses` ou statut normal)
   - 🏖 En congé (day_status = C, R)
@@ -70,7 +71,7 @@ Pour **chaque jour ouvrable** de la période demandée :
 Apparaît **uniquement si un problème de couverture est détecté** (au moins un jour avec <50% de présence ou 0 présent).
 
 Pour chaque jour problématique :
-- Liste des travailleurs **disponibles** : présents ce jour-là, pas affectés au bureau en question, pas en congé/maladie
+- Liste des travailleurs **disponibles** : actifs (`is_active = true`), présents ce jour-là, pas affectés au bureau en question, pas en congé/maladie, pas en jour off (`regime_travail.jour_off`)
 - Chaque travailleur disponible a un bouton "Réaffecter"
 - Cliquer crée une `reassignation_temporaire` en statut `en_attente`
 - Le travailleur réaffecté reçoit :
@@ -103,11 +104,12 @@ CREATE TABLE reassignations_temporaires (
   statut TEXT NOT NULL DEFAULT 'en_attente' CHECK (statut IN ('en_attente', 'accepte', 'refuse')),
   demande_par UUID NOT NULL REFERENCES profiles(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
   repondu_le TIMESTAMPTZ,
   commentaire TEXT,
   vu_par_travailleur BOOLEAN DEFAULT false,
 
-  UNIQUE(travailleur_id, date, bureau_id)
+  UNIQUE(conge_id, travailleur_id, date)
 );
 
 CREATE INDEX idx_reassignations_bureau_date ON reassignations_temporaires(bureau_id, date);
@@ -118,23 +120,25 @@ CREATE INDEX idx_reassignations_conge ON reassignations_temporaires(conge_id);
 ### RLS Policies
 
 ```sql
--- Travailleur : lecture/modification de ses propres réaffectations
+-- Travailleur : lecture seule de ses propres réaffectations
+-- Les mutations (accepter/refuser) passent par createAdminClient() dans les server actions
+-- pour garder le contrôle sur les colonnes modifiées (pattern existant dans lib/notifications/actions.ts)
 CREATE POLICY "Travailleur voit ses reassignations"
   ON reassignations_temporaires FOR SELECT
   USING (travailleur_id = auth.uid());
-
-CREATE POLICY "Travailleur repond a ses reassignations"
-  ON reassignations_temporaires FOR UPDATE
-  USING (travailleur_id = auth.uid())
-  WITH CHECK (travailleur_id = auth.uid());
 
 -- Admin RH : accès complet
 CREATE POLICY "Admin RH acces complet reassignations"
   ON reassignations_temporaires FOR ALL
   USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin_rh = true)
+  )
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin_rh = true)
   );
 ```
+
+> **Note** : pas de policy UPDATE pour les travailleurs. Les réponses (accepter/refuser) sont gérées via `createAdminClient()` dans `repondreReassignation()`, qui ne modifie que `statut`, `repondu_le` et `commentaire`. Cela évite qu'un travailleur puisse modifier d'autres colonnes (conge_id, bureau_id, etc.).
 
 ### Tables existantes utilisées (lecture seule)
 
@@ -159,8 +163,10 @@ CREATE POLICY "Admin RH acces complet reassignations"
    - Badge Accueil = total existant + reassignationsEnAttente
    - `NotificationsBanner` affiche "Demande de réaffectation : Bureau [X] le [date] pour remplacer [Nom]" avec boutons Accepter/Refuser
 4. Réponse du travailleur → `repondreReassignation(id, accepte, commentaire)`
-   - Met à jour `statut`, `repondu_le`, `commentaire`
-   - Si refus → notification RH
+   - Met à jour `statut`, `repondu_le`, `commentaire` (via `createAdminClient()`)
+   - Si **accepté** → créer/mettre à jour une entrée `bureau_affectations_temp` pour que le calendrier reflète la réaffectation
+   - Si **refusé** → notification RH
+   - **Audit log** dans les deux cas
 
 ### Pour le RH
 
@@ -186,10 +192,11 @@ CREATE POLICY "Admin RH acces complet reassignations"
 | `lib/conges/admin-actions.ts` | Ajout | `creerReassignation(congeId, travailleurId, bureauId, date)` |
 | `lib/reassignations/actions.ts` | Nouveau | `getReassignationsEnAttente()`, `repondreReassignation(id, accepte, commentaire)` |
 | `lib/notifications/counts.ts` | Modification | Ajouter compteurs reassignation worker + admin |
-| `lib/notifications/actions.ts` | Modification | Ajouter type reassignation dans decisions |
+| `lib/notifications/actions.ts` | Modification | Ajouter type reassignation dans decisions + `markAllDecisionsVues()` |
 | `components/dashboard/NotificationsBanner.tsx` | Modification | Carte réaffectation avec Accepter/Refuser |
 | `types/database.ts` | Ajout | Type `ReassignationTemporaire` |
-| Migration Supabase | Nouveau | Table + index + RLS |
+| `emails/ReassignationEmail.tsx` | Nouveau | Template email pour notification de réaffectation |
+| Migration Supabase | Nouveau | Table + index + RLS + trigger `updated_at` |
 
 ---
 
@@ -201,3 +208,9 @@ CREATE POLICY "Admin RH acces complet reassignations"
 4. **Périmètre couverture** : tous les travailleurs du même bureau, tous services/secteurs confondus
 5. **Email non bloquant** : l'envoi d'email est en try/catch, un échec n'empêche pas la réaffectation
 6. **Soldes contextuels** : alerte rouge si négatif après approbation, orange si zéro, vert sinon
+7. **Regime travail** : les travailleurs en jour off (via `regime_travail.jour_off`) sont exclus du calcul de couverture
+8. **Filtrage actifs** : seuls les travailleurs `is_active = true` sont considérés pour la couverture et la réaffectation
+9. **Lien avec bureau_affectations_temp** : une réaffectation acceptée crée une entrée dans `bureau_affectations_temp` pour que le calendrier RH reflète le changement
+10. **Contrainte UNIQUE** : `(conge_id, travailleur_id, date)` — permet de ré-assigner le même travailleur au même bureau pour un congé différent
+11. **Audit** : toutes les opérations de réaffectation (création par RH, acceptation/refus par travailleur) sont logguées via `logAudit()`
+12. **Longues périodes** : si le congé dépasse 5 jours ouvrables, les jours sont regroupés par semaine dans la Zone 3 avec un résumé par jour
