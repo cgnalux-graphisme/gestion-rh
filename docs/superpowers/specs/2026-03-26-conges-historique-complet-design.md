@@ -42,6 +42,11 @@ CREATE TABLE annulations_conges (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Contrainte : une seule demande d'annulation active par congé
+CREATE UNIQUE INDEX idx_annulations_conges_unique_pending
+  ON annulations_conges (conge_id)
+  WHERE statut = 'en_attente';
+
 -- RLS
 ALTER TABLE annulations_conges ENABLE ROW LEVEL SECURITY;
 
@@ -56,8 +61,27 @@ CREATE POLICY "Workers insert own annulations"
 CREATE POLICY "Admins full access annulations"
   ON annulations_conges FOR ALL
   USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin_rh = true)
+  )
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin_rh = true)
   );
+```
+
+### Nouveau type TypeScript `AnnulationConge`
+
+```typescript
+export type AnnulationConge = {
+  id: string
+  conge_id: string
+  user_id: string
+  motif: string
+  statut: 'en_attente' | 'approuve' | 'refuse'
+  commentaire_admin: string | null
+  traite_par: string | null
+  traite_le: string | null
+  created_at: string
+}
 ```
 
 ### Modification du type StatutConge
@@ -75,17 +99,29 @@ Union de 4 sources pour construire le journal :
 | Source | Type mouvement | Delta |
 |---|---|---|
 | `demandes_heures_sup` approuvées | `hs_approuvee` | +nb_minutes |
-| `conges` type `recuperation` approuvés | `recup_prise` | -nb_minutes (calculé depuis nb_jours × minutes/jour selon option_horaire) |
-| `corrections_pointage` refusées avec minutes_deduites > 0 | `deduction_correction` | -minutes_deduites |
+| `conges` type `recuperation` approuvés | `recup_prise` | -recup_minutes (nouveau champ, stocké à la création) |
+| `corrections_pointage` avec minutes_deduites > 0 (refus avec pénalité) | `deduction_correction` | -minutes_deduites |
 | `audit_logs` catégorie `pot_heures` action correction manuelle | `correction_admin` | ±delta extrait du metadata |
 
 Chaque mouvement : date, type, description, delta_minutes, solde_apres (calculé par window function cumulative).
+
+**Solde initial :** La window function doit être seedée avec le solde initial du pot (`parametres_option_horaire.pot_heures_initial` pour l'année). Un mouvement virtuel "Solde initial" est injecté au 1er janvier comme point de départ du cumul.
+
+### Nouveau champ `recup_minutes` sur `conges`
+
+Pour les congés de type `recuperation`, les minutes sont actuellement encodées dans `commentaire_travailleur` (format texte). Ajout d'un champ numérique dédié :
+
+```sql
+ALTER TABLE conges ADD COLUMN IF NOT EXISTS recup_minutes INTEGER DEFAULT NULL;
+```
+
+Ce champ est rempli à la création de la demande (depuis `recup_heures` × 60 + `recup_minutes` du formulaire). Il permet de recréditer le pot correctement lors d'une annulation, sans parser le commentaire.
 
 ## Logique métier — Annulation de congé approuvé
 
 ### Flux travailleur
 
-1. Clic "Demander l'annulation" sur un congé `approuve` dont `date_debut > today`
+1. Clic "Demander l'annulation" sur un congé `approuve` dont `date_debut > todayBrussels()` (timezone Europe/Brussels)
 2. Saisie d'un motif obligatoire dans une mini modale
 3. Insert `annulations_conges` statut `en_attente`
 4. Le congé reste actif — pas de changement tant que le RH n'a pas validé
@@ -93,18 +129,18 @@ Chaque mouvement : date, type, description, delta_minutes, solde_apres (calculé
 
 ### Flux RH — approbation
 
-Dans une transaction :
+Via une fonction PostgreSQL `rpc` pour garantir l'atomicité (le client Supabase JS ne supporte pas les transactions multi-tables) :
 
 1. `annulations_conges.statut = 'approuve'`, `traite_par`, `traite_le`
 2. `conges.statut = 'annule'`
 3. Recréditer soldes :
    - VA : `soldes_conges.conges_annuels_pris -= nb_jours`
    - RC : `soldes_conges.repos_comp_pris -= nb_jours`
-   - Récup : `pot_heures.solde_minutes += minutes_deduites` (recalculé)
+   - Récup : `pot_heures.solde_minutes += conges.recup_minutes`
 4. Supprimer `day_statuses` pour user_id + plage date_debut→date_fin
-5. Supprimer/annuler `reassignations_temporaires` liées au conge_id
-6. Audit log
-7. Email notification travailleur
+5. Supprimer `reassignations_temporaires` liées au conge_id
+6. Audit log (appelé après le rpc côté serveur)
+7. Email notification travailleur (appelé après le rpc côté serveur)
 
 ### Flux RH — refus
 
@@ -114,10 +150,11 @@ Dans une transaction :
 
 ### Garde-fous
 
-- Impossible de demander l'annulation d'un congé passé (`date_debut <= today`)
-- Une seule demande d'annulation active (`en_attente`) par congé
+- Impossible de demander l'annulation d'un congé passé (`date_debut <= todayBrussels()`)
+- Une seule demande d'annulation active (`en_attente`) par congé (contrainte unique partielle en DB)
 - Le statut `annule` est final
-- Les congés `en_attente` gardent le système d'annulation directe existant (suppression)
+- Les congés `en_attente` gardent le système d'annulation directe existant (suppression via `annulerCongeAction`)
+- Les deux chemins sont mutuellement exclusifs : `en_attente` → suppression directe, `approuve` → demande d'annulation avec validation RH
 
 ## Graphique pot d'heures
 
@@ -165,7 +202,7 @@ Dans une transaction :
 | Action | Fichier | Rôle |
 |---|---|---|
 | `demanderAnnulationCongeAction` | `lib/conges/actions.ts` | Créer demande d'annulation |
-| `traiterAnnulationCongeAction` | `lib/conges/admin-actions.ts` | Approuver/refuser annulation (admin) |
+| `traiterAnnulationCongeAction` | `lib/conges/admin-actions.ts` | Approuver/refuser annulation (admin, appelle rpc pour atomicité) |
 | `getMouvementsPotHeuresAction` | `lib/heures-sup/actions.ts` | Query union 4 sources + window function |
 | `getHistoriqueCongesAction` | `lib/conges/actions.ts` | Congés filtrés par année pour le travailleur |
 | `getAnnulationsEnCoursAction` | `lib/conges/actions.ts` | Annulations en_attente pour le travailleur |
