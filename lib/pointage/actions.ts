@@ -3,13 +3,22 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { Pointage } from '@/types/database'
 import { todayBrussels, nowBrusselsIso } from '@/lib/utils/dates'
 import { logAudit } from '@/lib/audit/logger'
 
+const MOBILE_REGEX = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i
+
 export type PointageType = 'arrivee' | 'midi_out' | 'midi_in' | 'depart'
 
 export async function pointerAction(type: PointageType): Promise<{ error?: string }> {
+  const headersList = headers()
+  const userAgent = headersList.get('user-agent') ?? ''
+  if (MOBILE_REGEX.test(userAgent)) {
+    return { error: 'Le pointage n\'est pas autorisé depuis un appareil mobile. Veuillez utiliser un ordinateur.' }
+  }
+
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
