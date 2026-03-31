@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { Pointage } from '@/types/database'
+import { todayBrussels, nowBrusselsIso } from '@/lib/utils/dates'
+import { logAudit } from '@/lib/audit/logger'
 
 export type PointageType = 'arrivee' | 'midi_out' | 'midi_in' | 'depart'
 
@@ -12,11 +14,8 @@ export async function pointerAction(type: PointageType): Promise<{ error?: strin
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const today = new Date().toISOString().slice(0, 10)
-  const now = new Date()
-  // Arrondi à la minute
-  now.setSeconds(0, 0)
-  const nowIso = now.toISOString()
+  const today = todayBrussels()
+  const nowIso = nowBrusselsIso()
 
   const { error } = await supabase.from('pointage').upsert(
     { user_id: user.id, date: today, [type]: nowIso },
@@ -24,7 +23,17 @@ export async function pointerAction(type: PointageType): Promise<{ error?: strin
   )
 
   if (error) return { error: error.message }
-  revalidatePath('/')
+
+  await logAudit({
+    targetUserId: user.id,
+    actorUserId: user.id,
+    action: `pointage.${type}`,
+    category: 'pointage',
+    description: `Pointage: ${type}`,
+    metadata: { date: today, type },
+  })
+
+  revalidatePath('/', 'layout')
   return {}
 }
 
@@ -33,7 +42,7 @@ export async function getTodayPointage(): Promise<Pointage | null> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayBrussels()
   const { data } = await supabase
     .from('pointage')
     .select('*')

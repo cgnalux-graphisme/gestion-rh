@@ -1,14 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getWorkerMonthPointage } from '@/lib/pointage/actions'
+import { getMesCorrectionsAction } from '@/lib/pointage/correction-actions'
 import Link from 'next/link'
 import { Pointage } from '@/types/database'
-
-function formatTime(iso: string | null): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-}
+import CorrectionPointageForm from '@/components/pointage/CorrectionPointageForm'
+import { formatTimeBrussels, todayBrussels } from '@/lib/utils/dates'
 
 function getAllDaysOfMonth(year: number, month: number): Date[] {
   const days: Date[] = []
@@ -28,26 +25,32 @@ const MOIS_FR = [
 export default async function PointagePage({
   searchParams,
 }: {
-  searchParams: { mois?: string }
+  searchParams: Promise<{ mois?: string }>
 }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  const { mois } = await searchParams
   const now = new Date()
   let year = now.getFullYear()
   let month = now.getMonth() + 1
-  if (searchParams.mois) {
-    const [y, m] = searchParams.mois.split('-').map(Number)
+  if (mois) {
+    const [y, m] = mois.split('-').map(Number)
     if (y && m && m >= 1 && m <= 12) { year = y; month = m }
   }
 
-  const pointages = await getWorkerMonthPointage(year, month)
+  const [pointages, corrections] = await Promise.all([
+    getWorkerMonthPointage(year, month),
+    getMesCorrectionsAction(),
+  ])
+
+
   const byDate: Record<string, Pointage> = {}
   for (const p of pointages) byDate[p.date] = p
 
   const days = getAllDaysOfMonth(year, month)
-  const today = now.toISOString().slice(0, 10)
+  const today = todayBrussels()
 
   const prevDate = new Date(year, month - 2, 1)
   const nextDate = new Date(year, month, 1)
@@ -55,10 +58,10 @@ export default async function PointagePage({
   const nextParam = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <div className="flex items-center justify-between mb-4">
+    <div className="p-6 max-w-2xl mx-auto space-y-4">
+      <div className="flex items-center justify-between">
         <h1 className="text-sm font-bold text-[#1a2332]">
-          ⏱ Mon pointage — {MOIS_FR[month - 1]} {year}
+          ⏱ Historique pointage — {MOIS_FR[month - 1]} {year}
         </h1>
         <div className="flex gap-2">
           <Link
@@ -91,7 +94,7 @@ export default async function PointagePage({
             {days.map((d) => {
               const dow = d.getDay()
               const isWeekend = dow === 0 || dow === 6
-              const dateStr = d.toISOString().slice(0, 10)
+              const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
               const isToday = dateStr === today
               const p = byDate[dateStr]
               const DOW_FR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
@@ -112,10 +115,10 @@ export default async function PointagePage({
                     <td colSpan={4} className="text-center text-gray-200 text-[9px]">—</td>
                   ) : (
                     <>
-                      <td className="text-center px-2 py-1.5 text-[#1a2332]">{formatTime(p?.arrivee ?? null)}</td>
-                      <td className="text-center px-2 py-1.5 text-[#1a2332]">{formatTime(p?.midi_out ?? null)}</td>
-                      <td className="text-center px-2 py-1.5 text-[#1a2332]">{formatTime(p?.midi_in ?? null)}</td>
-                      <td className="text-center px-2 py-1.5 text-[#1a2332]">{formatTime(p?.depart ?? null)}</td>
+                      <td className="text-center px-2 py-1.5 text-[#1a2332]">{formatTimeBrussels(p?.arrivee ?? null)}</td>
+                      <td className="text-center px-2 py-1.5 text-[#1a2332]">{formatTimeBrussels(p?.midi_out ?? null)}</td>
+                      <td className="text-center px-2 py-1.5 text-[#1a2332]">{formatTimeBrussels(p?.midi_in ?? null)}</td>
+                      <td className="text-center px-2 py-1.5 text-[#1a2332]">{formatTimeBrussels(p?.depart ?? null)}</td>
                     </>
                   )}
                 </tr>
@@ -124,6 +127,9 @@ export default async function PointagePage({
           </tbody>
         </table>
       </div>
+
+      {/* Module de correction de pointage */}
+      <CorrectionPointageForm corrections={corrections} />
     </div>
   )
 }

@@ -166,26 +166,16 @@ export async function traiterCongeAction(
   if (decision === 'approuve') {
     const annee = new Date(conge.date_debut).getFullYear()
 
-    // Incrémenter le compteur de jours pris dans soldes_conges
+    // Incrémenter le compteur de jours pris dans soldes_conges (UPDATE atomique via RPC)
     if (conge.type === 'conge_annuel' || conge.type === 'repos_comp') {
-      const { data: solde } = await admin
-        .from('soldes_conges')
-        .select('conges_annuels_pris, repos_comp_pris')
-        .eq('user_id', conge.user_id)
-        .eq('annee', annee)
-        .single()
-
-      if (solde) {
-        const update =
-          conge.type === 'conge_annuel'
-            ? { conges_annuels_pris: solde.conges_annuels_pris + conge.nb_jours, updated_at: new Date().toISOString() }
-            : { repos_comp_pris: solde.repos_comp_pris + conge.nb_jours, updated_at: new Date().toISOString() }
-        await admin
-          .from('soldes_conges')
-          .update(update)
-          .eq('user_id', conge.user_id)
-          .eq('annee', annee)
-      }
+      const champ = conge.type === 'conge_annuel' ? 'conges_annuels_pris' : 'repos_comp_pris'
+      const { error: rpcError } = await admin.rpc('incrementer_solde_conges', {
+        p_user_id: conge.user_id,
+        p_annee: annee,
+        p_champ: champ,
+        p_delta: conge.nb_jours,
+      })
+      if (rpcError) return { error: `Erreur mise à jour solde: ${rpcError.message}` }
     }
 
     // Si récupération : déduire du pot d'heures (nb_jours * minutes théoriques/jour)
@@ -209,10 +199,14 @@ export async function traiterCongeAction(
         .single()
 
       if (pot) {
+        const newSolde = pot.solde_minutes - minutesADeduire
+        if (newSolde < 0) {
+          return { error: `Pot d'heures insuffisant (${pot.solde_minutes} min disponibles, ${minutesADeduire} min requises)` }
+        }
         await admin
           .from('pot_heures')
           .update({
-            solde_minutes: pot.solde_minutes - minutesADeduire,
+            solde_minutes: newSolde,
             updated_at: new Date().toISOString(),
           })
           .eq('user_id', conge.user_id)
@@ -227,18 +221,19 @@ export async function traiterCongeAction(
 
     const joursOuvrables = getJoursOuvrables(conge.date_debut, conge.date_fin)
     if (joursOuvrables.length > 0) {
+      const demiLabel = conge.demi_journee === 'matin' ? ' (matin)' : conge.demi_journee === 'apres_midi' ? ' (après-midi)' : ''
       const upserts = joursOuvrables.map((date) => ({
         user_id: conge.user_id,
         date,
         status: statusCode,
-        commentaire: `Congé approuvé #${id.slice(0, 8)}`,
+        commentaire: `Congé approuvé #${id.slice(0, 8)}${demiLabel}`,
         corrige_par: adminUser.id,
       }))
       await admin.from('day_statuses').upsert(upserts, { onConflict: 'user_id,date' })
     }
   }
 
-  // Envoyer email au travailleur (non-bloquant)
+  // Envoyer email au travailleur (non-bloquant, avec logging en cas d'échec)
   const profile = conge.profile as { prenom: string; nom: string; email: string } | null
   if (profile?.email) {
     sendCongeDecisionEmail({
@@ -249,8 +244,19 @@ export async function traiterCongeAction(
       date_debut: conge.date_debut,
       date_fin: conge.date_fin,
       nb_jours: conge.nb_jours,
+      demi_journee: conge.demi_journee,
       commentaire_admin,
-    }).catch(() => {/* email non-bloquant */})
+    }).catch((err) => {
+      console.error('[sendCongeDecisionEmail] Échec envoi:', err)
+      logAudit({
+        targetUserId: conge.user_id,
+        actorUserId: adminUser.id,
+        action: 'email.echec',
+        category: 'admin',
+        description: `Échec envoi email décision congé à ${profile.email}`,
+        metadata: { error: String(err), conge_id: id, decision },
+      }).catch(() => {})
+    })
   }
 
   await logAudit({
@@ -259,13 +265,99 @@ export async function traiterCongeAction(
     action: `conge.${decision}`,
     category: 'conges',
     description: `Congé ${decision === 'approuve' ? 'approuvé' : 'refusé'}: ${conge.type} du ${conge.date_debut} au ${conge.date_fin} (${conge.nb_jours}j)`,
-    metadata: { type: conge.type, date_debut: conge.date_debut, date_fin: conge.date_fin, nb_jours: conge.nb_jours, decision },
+    metadata: { type: conge.type, date_debut: conge.date_debut, date_fin: conge.date_fin, nb_jours: conge.nb_jours, demi_journee: conge.demi_journee, decision },
     commentaire: commentaire_admin,
   })
 
   revalidatePath('/admin/conges')
   revalidatePath('/conges')
   revalidatePath('/admin/recap')
+  return { success: true }
+}
+
+/** Approuve ou refuse une demande d'annulation de congé */
+export async function traiterAnnulationCongeAction(
+  annulationId: string,
+  decision: 'approuve' | 'refuse',
+  commentaire_admin?: string
+): Promise<{ error?: string; success?: boolean }> {
+  const adminUser = await assertAdmin()
+  const admin = createAdminClient()
+
+  if (decision === 'refuse' && !commentaire_admin?.trim()) {
+    return { error: 'Un commentaire est obligatoire pour refuser une annulation' }
+  }
+
+  const { data: annulation } = await admin
+    .from('annulations_conges')
+    .select('*, conge:conges!conge_id(*, profile:profiles!user_id(prenom, nom, email))')
+    .eq('id', annulationId)
+    .single()
+
+  if (!annulation) return { error: 'Demande introuvable' }
+  if (annulation.statut !== 'en_attente') return { error: 'Cette demande a déjà été traitée' }
+
+  if (decision === 'approuve') {
+    // Appel RPC atomique
+    const { error: rpcError } = await admin.rpc('approuver_annulation_conge', {
+      p_annulation_id: annulationId,
+      p_admin_id: adminUser.id,
+    })
+    if (rpcError) return { error: rpcError.message }
+  } else {
+    // Refus simple
+    const { error: updateError } = await admin
+      .from('annulations_conges')
+      .update({
+        statut: 'refuse',
+        commentaire_admin: commentaire_admin?.trim() ?? null,
+        traite_par: adminUser.id,
+        traite_le: new Date().toISOString(),
+      })
+      .eq('id', annulationId)
+    if (updateError) return { error: updateError.message }
+  }
+
+  const conge = annulation.conge as Conge & { profile: { prenom: string; nom: string; email: string } | null }
+
+  // Email notification (non-bloquant)
+  if (conge?.profile?.email) {
+    sendCongeDecisionEmail({
+      email: conge.profile.email,
+      prenom: conge.profile.prenom,
+      decision: decision === 'approuve' ? 'refuse' : 'approuve', // inversé: annulation approuvée = congé annulé
+      type: conge.type,
+      date_debut: conge.date_debut,
+      date_fin: conge.date_fin,
+      nb_jours: conge.nb_jours,
+      commentaire_admin: decision === 'approuve'
+        ? 'Votre demande d\'annulation a été acceptée. Le congé est annulé.'
+        : `Votre demande d'annulation a été refusée. ${commentaire_admin ?? ''}`,
+    }).catch((err) => {
+      console.error('[sendCongeDecisionEmail] Échec envoi annulation:', err)
+      logAudit({
+        targetUserId: annulation.user_id,
+        actorUserId: adminUser.id,
+        action: 'email.echec',
+        category: 'admin',
+        description: `Échec envoi email annulation congé à ${conge.profile?.email}`,
+        metadata: { error: String(err), annulation_id: annulationId, decision },
+      }).catch(() => {})
+    })
+  }
+
+  await logAudit({
+    targetUserId: annulation.user_id,
+    actorUserId: adminUser.id,
+    action: `conge.annulation_${decision}`,
+    category: 'conges',
+    description: `Annulation ${decision === 'approuve' ? 'approuvée' : 'refusée'} pour congé #${annulation.conge_id.slice(0, 8)}`,
+    metadata: { annulation_id: annulationId, conge_id: annulation.conge_id, decision },
+    commentaire: commentaire_admin,
+  })
+
+  revalidatePath('/admin/conges')
+  revalidatePath('/conges')
   return { success: true }
 }
 
@@ -343,7 +435,17 @@ export async function creerReassignation(
       date: formatDateFr(date),
       raisonPrenom: congeProfile?.prenom ?? '',
       raisonNom: congeProfile?.nom ?? '',
-    }).catch(() => {/* email non-bloquant */})
+    }).catch((err) => {
+      console.error('[sendReassignationEmail] Échec envoi:', err)
+      logAudit({
+        targetUserId: travailleurId,
+        actorUserId: adminUser.id,
+        action: 'email.echec',
+        category: 'admin',
+        description: `Échec envoi email réaffectation à ${travailleur.email}`,
+        metadata: { error: String(err), conge_id: congeId },
+      }).catch(() => {})
+    })
   }
 
   revalidatePath('/admin/conges')

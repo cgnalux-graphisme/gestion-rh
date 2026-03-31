@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 const JOURS = [
   { jour: 1 as const, label: 'Lundi' },
@@ -47,12 +47,25 @@ export default function BureauScheduleEditor({
   schedules: UserBureauSchedule[]
 }) {
   const [state, action] = useFormState(setBureauScheduleAction, null)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const prevSuccess = useRef(state?.success)
+
+  useEffect(() => {
+    if (state?.success && !prevSuccess.current) {
+      setShowSuccess(true)
+      const timer = setTimeout(() => setShowSuccess(false), 3000)
+      return () => clearTimeout(timer)
+    }
+    prevSuccess.current = state?.success
+  }, [state?.success])
 
   const initial: Record<number, string> = {}
   for (const j of [1, 2, 3, 4, 5]) {
     initial[j] = schedules.find((s) => s.jour === j)?.bureau_id ?? ''
   }
   const [selections, setSelections] = useState(initial)
+
+  const bureauMap = new Map(bureaux.map((b) => [b.id, b.nom]))
 
   function handleChange(jour: number, val: string) {
     setSelections((prev) => ({ ...prev, [jour]: val === NONE ? '' : val }))
@@ -77,7 +90,12 @@ export default function BureauScheduleEditor({
                 onValueChange={(v) => handleChange(jour, v ?? '')}
               >
                 <SelectTrigger className="text-xs h-8">
-                  <SelectValue />
+                  <span className="flex flex-1 text-left truncate">
+                    {selections[jour]
+                      ? bureauMap.get(selections[jour]) ?? selections[jour]
+                      : <span className="text-gray-400 italic">Sur la route</span>
+                    }
+                  </span>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NONE} className="text-xs text-gray-400 italic">
@@ -98,7 +116,7 @@ export default function BureauScheduleEditor({
         {state?.error && (
           <p className="text-xs text-red-600 bg-red-50 p-2 rounded-md">{state.error}</p>
         )}
-        {state?.success && (
+        {showSuccess && (
           <p className="text-xs text-green-600 bg-green-50 p-2 rounded-md">
             ✓ Affectation mise à jour.
           </p>

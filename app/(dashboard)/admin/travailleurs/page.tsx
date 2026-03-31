@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import TravailleursTable from '@/components/admin/TravailleursTable'
 import InviterDialog from '@/components/admin/InviterDialog'
+import TravailleursPageClient from '@/components/admin/TravailleursPageClient'
 import { Profile, Service } from '@/types/database'
 
 export default async function TravailleursAdminPage() {
@@ -33,7 +33,7 @@ export default async function TravailleursAdminPage() {
     <div className="max-w-5xl mx-auto p-4 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-sm font-bold text-[#1a2332]">👥 Gestion des travailleurs</h1>
+          <h1 className="text-sm font-bold text-[#1a2332]">Gestion des travailleurs</h1>
           <p className="text-[10px] text-gray-400 mt-0.5">
             {active.length} actif{active.length !== 1 ? 's' : ''} · {inactive.length} inactif
             {inactive.length !== 1 ? 's' : ''}
@@ -42,23 +42,7 @@ export default async function TravailleursAdminPage() {
         <InviterDialog services={services} />
       </div>
 
-      {active.length > 0 && (
-        <section>
-          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-2">
-            Travailleurs actifs
-          </p>
-          <TravailleursTable workers={active} />
-        </section>
-      )}
-
-      {inactive.length > 0 && (
-        <section>
-          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6">
-            Inactifs
-          </p>
-          <TravailleursTable workers={inactive} />
-        </section>
-      )}
+      <TravailleursPageClient active={active} inactive={inactive} />
 
       {workers.length === 0 && (
         <div className="text-center py-16 text-gray-400">

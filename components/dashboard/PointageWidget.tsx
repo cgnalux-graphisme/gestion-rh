@@ -3,11 +3,11 @@
 import { useState, useTransition } from 'react'
 import { pointerAction, PointageType } from '@/lib/pointage/actions'
 import { Pointage } from '@/types/database'
+import { formatTimeBrussels } from '@/lib/utils/dates'
 
 function formatTime(iso: string | null): string {
   if (!iso) return ''
-  const d = new Date(iso)
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  return formatTimeBrussels(iso)
 }
 
 const STEPS: { type: PointageType; label: string }[] = [
@@ -33,8 +33,8 @@ export default function PointageWidget({ pointage }: { pointage: Pointage | null
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4">
-      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-3">
+    <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
         🕐 Pointage du jour
       </p>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -49,7 +49,7 @@ export default function PointageWidget({ pointage }: { pointage: Pointage | null
               onClick={() => isActive && handleClick(type)}
               disabled={!isActive || isPending}
               className={[
-                'flex flex-col items-center justify-center rounded-lg py-3 px-2 text-xs font-bold transition-all',
+                'flex flex-col items-center justify-center rounded-lg py-3 px-2 text-sm font-bold transition-all',
                 isDone
                   ? 'bg-[#10b981] text-white cursor-default'
                   : isActive
@@ -57,12 +57,12 @@ export default function PointageWidget({ pointage }: { pointage: Pointage | null
                   : 'bg-gray-100 text-gray-300 cursor-not-allowed',
               ].join(' ')}
             >
-              <span className="text-[10px] font-normal opacity-80">{label}</span>
+              <span className="text-xs font-normal opacity-80">{label}</span>
               {isDone && (
-                <span className="mt-0.5 text-[11px] font-black">{formatTime(value!)}</span>
+                <span className="mt-0.5 text-sm font-black">{formatTime(value!)}</span>
               )}
               {!isDone && isActive && (
-                <span className="mt-0.5 text-[10px] opacity-70">
+                <span className="mt-0.5 text-xs opacity-70">
                   {isPending ? '…' : 'Cliquer'}
                 </span>
               )}
@@ -71,10 +71,10 @@ export default function PointageWidget({ pointage }: { pointage: Pointage | null
         })}
       </div>
       {error && (
-        <p className="mt-2 text-[10px] text-red-600 bg-red-50 rounded p-1.5">{error}</p>
+        <p className="mt-2 text-xs text-red-600 bg-red-50 rounded p-2">{error}</p>
       )}
       {nextIndex === -1 && (
-        <p className="mt-2 text-[10px] text-green-600 text-center">✓ Journée complète</p>
+        <p className="mt-2 text-xs text-green-600 text-center">✓ Journée complète</p>
       )}
     </div>
   )

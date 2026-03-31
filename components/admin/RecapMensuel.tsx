@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { formatLocalDate } from '@/lib/utils/dates'
 
 interface Props {
   workers: (Profile & { service?: Service })[]
@@ -26,7 +27,7 @@ const MOIS_FR = [
 ]
 
 const STATUS_LABELS: Record<string, string> = {
-  P: 'Présent', C: 'Congé', M: 'Maladie', R: 'Récup.', F: 'Férié', A: 'Absent',
+  P: 'Présent', C: 'Congé', M: 'Maladie', R: 'Récup.', F: 'Férié', A: 'Absent', G: 'Grève',
 }
 
 const STATUS_BG: Record<DayStatus, string> = {
@@ -36,6 +37,7 @@ const STATUS_BG: Record<DayStatus, string> = {
   R: 'bg-[#6c63ff] text-white',
   F: 'bg-[#6b7280] text-white',
   A: 'bg-[#f97316] text-white',
+  G: 'bg-[#ca8a04] text-white',
   '?': 'bg-white text-red-600 border border-red-400 border-dashed',
   W: 'bg-gray-100 text-gray-300',
   '-': 'bg-white text-gray-200',
@@ -165,7 +167,7 @@ export default function RecapMensuel({
                     <div className="text-[8px] text-gray-400 truncate">{w.service?.nom}</div>
                   </td>
                   {weekdays.map((d) => {
-                    const dateStr = d.toISOString().slice(0, 10)
+                    const dateStr = formatLocalDate(d)
                     const isToday = d.getTime() === today.getTime()
                     const status = computeStatus(w.id, dateStr, d, today, pointageMap, statusMap)
                     const bgClass = STATUS_BG[status]

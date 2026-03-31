@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Profile } from '@/types/database'
-import { useRef } from 'react'
+import { useRef, useState, useEffect } from 'react'
 
 function SaveBar() {
   const { pending } = useFormStatus()
@@ -65,6 +65,17 @@ function Field({
 
 export default function CoordonneesSection({ profile }: { profile: Profile }) {
   const [state, action] = useFormState(updateCoordonneesAction, null)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const prevSuccessRef = useRef(state?.success)
+
+  useEffect(() => {
+    if (state?.success && !prevSuccessRef.current) {
+      setShowSuccess(true)
+      const timer = setTimeout(() => setShowSuccess(false), 3000)
+      return () => clearTimeout(timer)
+    }
+    prevSuccessRef.current = state?.success
+  }, [state?.success])
 
   return (
     <form action={action} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -130,7 +141,7 @@ export default function CoordonneesSection({ profile }: { profile: Profile }) {
         {state?.error && (
           <p className="text-xs text-red-600 bg-red-50 p-2 rounded-md">{state.error}</p>
         )}
-        {state?.success && (
+        {showSuccess && (
           <p className="text-xs text-green-600 bg-green-50 p-2 rounded-md">
             ✓ Coordonnées enregistrées avec succès.
           </p>

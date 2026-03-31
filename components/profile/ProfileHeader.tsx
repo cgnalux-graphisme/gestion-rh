@@ -1,4 +1,5 @@
 import { Profile, Service } from '@/types/database'
+import AvatarUpload from '@/components/profile/AvatarUpload'
 
 function calcAnciennete(dateEntree: string | null): string {
   if (!dateEntree) return '—'
@@ -14,17 +15,21 @@ function calcAnciennete(dateEntree: string | null): string {
 export default function ProfileHeader({
   profile,
   service,
+  editable = false,
 }: {
   profile: Profile
   service: Service | null
+  editable?: boolean
 }) {
   const initiales = `${profile.prenom[0]}${profile.nom[0]}`.toUpperCase()
 
   return (
     <div className="mx-4 mt-4 bg-gradient-to-r from-[#1a2332] to-[#2d3748] rounded-xl p-4 flex items-center gap-4">
-      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#e53e3e] to-[#9b2c2c] flex items-center justify-center text-white text-xl font-black flex-shrink-0 border-2 border-white/20">
-        {initiales}
-      </div>
+      <AvatarUpload
+        avatarUrl={profile.avatar_url}
+        initiales={initiales}
+        editable={editable}
+      />
 
       <div className="flex-1 min-w-0">
         <div className="text-white font-bold text-base">
@@ -45,7 +50,7 @@ export default function ProfileHeader({
           )}
           {profile.is_admin_rh && (
             <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
-              ★ Admin RH
+              Admin RH
             </span>
           )}
         </div>

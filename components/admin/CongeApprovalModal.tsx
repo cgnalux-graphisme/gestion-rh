@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button'
 import { Conge, Profile } from '@/types/database'
 import { traiterCongeAction, getSignedUrlAdminAction } from '@/lib/conges/admin-actions'
-import { formatDateFr, labelTypeConge } from '@/lib/utils/dates'
+import { formatDateFr, labelTypeConge, formatNbJours, labelDemiJournee } from '@/lib/utils/dates'
 
 type CongeWithProfile = Conge & { profile: Pick<Profile, 'prenom' | 'nom' | 'email'> }
 
@@ -66,11 +66,16 @@ export default function CongeApprovalModal({ conge, open, onClose, onDone }: Pro
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Période</span>
-              <span className="font-semibold">{formatDateFr(conge.date_debut)} → {formatDateFr(conge.date_fin)}</span>
+              <span className="font-semibold">
+                {conge.demi_journee
+                  ? <>{formatDateFr(conge.date_debut)} ({labelDemiJournee(conge.demi_journee)})</>
+                  : <>{formatDateFr(conge.date_debut)} → {formatDateFr(conge.date_fin)}</>
+                }
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Durée</span>
-              <span className="font-semibold">{conge.nb_jours} jour{conge.nb_jours > 1 ? 's' : ''}</span>
+              <span className="font-semibold">{formatNbJours(conge.nb_jours)} jour{conge.nb_jours > 1 ? 's' : ''}</span>
             </div>
           </div>
 

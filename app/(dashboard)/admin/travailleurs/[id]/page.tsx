@@ -1,13 +1,16 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Profile, Service, UserBureauSchedule, Bureau, PotHeures } from '@/types/database'
+import { Profile, Service, UserBureauSchedule, Bureau, PotHeures, RegimeTravail } from '@/types/database'
 import ProfileHeader from '@/components/profile/ProfileHeader'
 import TravailleurEditForm from '@/components/admin/TravailleurEditForm'
 import BureauScheduleEditor from '@/components/admin/BureauScheduleEditor'
 import OptionHoraireAdminSection from '@/components/admin/OptionHoraireAdminSection'
 import PotHeuresAdminSection from '@/components/admin/PotHeuresAdminSection'
 import SoldesCongesAdminSection from '@/components/admin/SoldesCongesAdminSection'
+import RegimeTravailSection from '@/components/admin/RegimeTravailSection'
+import HistoriqueSection from '@/components/admin/HistoriqueSection'
 import { getSoldesCongesWorkerAdmin } from '@/lib/conges/admin-actions'
+import { getRegimesTravailleur } from '@/lib/regime/actions'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { deactivateTravailleurAction } from '@/lib/auth/admin-actions'
@@ -42,8 +45,10 @@ async function DeactivateButton({ userId, isActive }: { userId: string; isActive
 export default async function TravailleurFichePage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id } = await params
+
   const supabase = createClient()
   const {
     data: { user },
@@ -60,22 +65,23 @@ export default async function TravailleurFichePage({
   const annee = new Date().getFullYear()
   const admin = createAdminClient()
 
-  const [profileRes, schedulesRes, bureauxRes, servicesRes, potHeuresRes, soldesCongesRes] = await Promise.all([
-    supabase.from('profiles').select('*, service:services(*)').eq('id', params.id).single(),
+  const [profileRes, schedulesRes, bureauxRes, servicesRes, potHeuresRes, soldesCongesRes, regimesRes] = await Promise.all([
+    supabase.from('profiles').select('*, service:services(*)').eq('id', id).single(),
     supabase
       .from('user_bureau_schedule')
       .select('*, bureau:bureaux(*)')
-      .eq('user_id', params.id)
+      .eq('user_id', id)
       .order('jour'),
     supabase.from('bureaux').select('*').order('nom'),
     supabase.from('services').select('*').order('nom'),
     admin
       .from('pot_heures')
       .select('*')
-      .eq('user_id', params.id)
+      .eq('user_id', id)
       .eq('annee', annee)
       .single(),
-    getSoldesCongesWorkerAdmin(params.id, annee),
+    getSoldesCongesWorkerAdmin(id, annee),
+    getRegimesTravailleur(id),
   ])
 
   if (profileRes.error || !profileRes.data) redirect('/admin/travailleurs')
@@ -86,6 +92,7 @@ export default async function TravailleurFichePage({
   const services = (servicesRes.data ?? []) as Service[]
   const potHeures = potHeuresRes.data as PotHeures | null
   const soldesConges = soldesCongesRes
+  const regimes = regimesRes as RegimeTravail[]
 
   return (
     <div className="max-w-3xl mx-auto pb-8">
@@ -108,6 +115,7 @@ export default async function TravailleurFichePage({
       <div className="p-4 space-y-4">
         <TravailleurEditForm profile={profile} services={services} />
         <OptionHoraireAdminSection profile={profile} />
+        <RegimeTravailSection userId={profile.id} regimes={regimes} />
         <BureauScheduleEditor
           userId={profile.id}
           bureaux={bureaux}
@@ -115,6 +123,7 @@ export default async function TravailleurFichePage({
         />
         <PotHeuresAdminSection userId={profile.id} potHeures={potHeures} />
         <SoldesCongesAdminSection userId={profile.id} soldes={soldesConges} annee={annee} />
+        <HistoriqueSection userId={profile.id} />
       </div>
     </div>
   )

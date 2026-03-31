@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Conge } from '@/types/database'
 import { annulerCongeAction } from '@/lib/conges/actions'
-import { formatDateFr, labelTypeConge, labelStatutConge } from '@/lib/utils/dates'
+import { formatDateFr, labelTypeConge, labelStatutConge, formatNbJours, labelDemiJournee } from '@/lib/utils/dates'
 
 const STATUT_STYLE: Record<string, string> = {
   en_attente: 'bg-amber-100 text-amber-700',
@@ -50,7 +50,10 @@ export default function ListeDemandesWorker({ conges }: Props) {
                 </span>
               </div>
               <div className="text-[11px] text-gray-500 mt-0.5">
-                {formatDateFr(c.date_debut)} → {formatDateFr(c.date_fin)} — <strong>{c.nb_jours} j</strong>
+                {c.demi_journee
+                  ? <>{formatDateFr(c.date_debut)} ({labelDemiJournee(c.demi_journee)}) — <strong>{formatNbJours(c.nb_jours)} j</strong></>
+                  : <>{formatDateFr(c.date_debut)} → {formatDateFr(c.date_fin)} — <strong>{formatNbJours(c.nb_jours)} j</strong></>
+                }
               </div>
               {c.commentaire_admin && (
                 <div className="text-[10px] text-gray-400 mt-1 italic">

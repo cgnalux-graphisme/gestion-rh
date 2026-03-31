@@ -5,7 +5,7 @@ import CoordonneesSection from '@/components/profile/CoordonneesSection'
 import DonneesRHSection from '@/components/profile/DonneesRHSection'
 import AffectationSection from '@/components/profile/AffectationSection'
 import HorairesSection from '@/components/profile/HorairesSection'
-import { Profile, Service, UserBureauSchedule } from '@/types/database'
+import { Profile, Service, UserBureauSchedule, ParametresOption } from '@/types/database'
 
 export default async function ProfilPage() {
   const supabase = createClient()
@@ -15,7 +15,7 @@ export default async function ProfilPage() {
 
   if (!user) redirect('/login')
 
-  const [profileRes, schedulesRes] = await Promise.all([
+  const [profileRes, schedulesRes, parametresRes] = await Promise.all([
     supabase
       .from('profiles')
       .select('*, service:services(*)')
@@ -26,21 +26,31 @@ export default async function ProfilPage() {
       .select('*, bureau:bureaux(*)')
       .eq('user_id', user.id)
       .order('jour'),
+    supabase
+      .from('parametres_options')
+      .select('*')
+      .order('option_horaire'),
   ])
 
   if (profileRes.error || !profileRes.data) redirect('/login')
 
   const profile = profileRes.data as Profile & { service: Service | null }
   const schedules = (schedulesRes.data ?? []) as UserBureauSchedule[]
+  const parametresOptions = (parametresRes.data ?? []) as ParametresOption[]
+
+  // Trouver les paramètres correspondant à l'option horaire du travailleur
+  const mesParametres = parametresOptions.find(
+    (p) => p.option_horaire === profile.option_horaire
+  ) ?? null
 
   return (
     <div className="max-w-3xl mx-auto pb-8">
-      <ProfileHeader profile={profile} service={profile.service ?? null} />
+      <ProfileHeader profile={profile} service={profile.service ?? null} editable />
       <div className="p-4 space-y-4">
         <CoordonneesSection profile={profile} />
         <DonneesRHSection profile={profile} service={profile.service ?? null} />
         <AffectationSection schedules={schedules} />
-        <HorairesSection profile={profile} schedules={schedules} />
+        <HorairesSection profile={profile} parametres={mesParametres} />
       </div>
     </div>
   )

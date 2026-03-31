@@ -9,6 +9,7 @@ import {
 import { redirect } from 'next/navigation'
 import bcrypt from 'bcryptjs'
 import { randomInt } from 'crypto'
+import { checkRateLimit, recordFailedAttempt, resetRateLimit } from '@/lib/auth/rate-limit'
 
 function generateOTP(): string {
   return String(randomInt(100000, 999999))
@@ -16,12 +17,22 @@ function generateOTP(): string {
 
 // --- Connexion ---
 export async function signIn(_prev: unknown, formData: FormData) {
+  const email = (formData.get('email') as string)?.trim()
+  if (!email) return { error: 'Email requis.' }
+
+  const allowed = await checkRateLimit(email)
+  if (!allowed) return { error: 'Trop de tentatives. Réessayez dans 15 minutes.' }
+
   const supabase = createClient()
   const { error } = await supabase.auth.signInWithPassword({
-    email: formData.get('email') as string,
+    email,
     password: formData.get('password') as string,
   })
-  if (error) return { error: 'Email ou mot de passe incorrect.' }
+  if (error) {
+    await recordFailedAttempt(email)
+    return { error: 'Email ou mot de passe incorrect.' }
+  }
+  await resetRateLimit(email)
   redirect('/profil')
 }
 
@@ -160,7 +171,12 @@ export async function activateAccount(_prev: unknown, formData: FormData) {
 
 // --- Mot de passe oublié ---
 export async function forgotPassword(_prev: unknown, formData: FormData) {
-  const email = formData.get('email') as string
+  const email = (formData.get('email') as string)?.trim()
+  if (!email) return { error: 'Email requis.' }
+
+  const allowed = await checkRateLimit(`reset:${email}`)
+  if (!allowed) return { error: 'Trop de tentatives. Réessayez dans 15 minutes.' }
+
   const admin = createAdminClient()
   const minDelay = new Promise((r) => setTimeout(r, 300))
 
@@ -171,6 +187,7 @@ export async function forgotPassword(_prev: unknown, formData: FormData) {
     .single()
 
   if (!profile) {
+    await recordFailedAttempt(`reset:${email}`)
     await minDelay
     return { success: true } // anti-énumération
   }

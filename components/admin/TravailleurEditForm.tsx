@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 function Field({
   name,
@@ -72,6 +72,18 @@ export default function TravailleurEditForm({
 }) {
   const [state, action] = useFormState(updateTravailleurAction, null)
   const [serviceId, setServiceId] = useState(profile.service_id ?? '')
+  const [showSuccess, setShowSuccess] = useState(false)
+  const prevSuccess = useRef(state?.success)
+
+  useEffect(() => {
+    if (state?.success && !prevSuccess.current) {
+      setShowSuccess(true)
+      const timer = setTimeout(() => setShowSuccess(false), 3000)
+      return () => clearTimeout(timer)
+    }
+    prevSuccess.current = state?.success
+  }, [state?.success])
+  const serviceMap = new Map(services.map((s) => [s.id, s.nom]))
 
   return (
     <form action={action} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -97,6 +109,12 @@ export default function TravailleurEditForm({
           defaultValue={profile.telephone}
           placeholder="+32 498 00 00 00"
         />
+        <Field
+          name="contact_urgence"
+          label="Contact d'urgence"
+          defaultValue={profile.contact_urgence}
+          placeholder="Prénom — 0477 00 00 00"
+        />
 
         <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wider pt-1">
           Données RH
@@ -108,7 +126,9 @@ export default function TravailleurEditForm({
           </Label>
           <Select value={serviceId} onValueChange={(v) => setServiceId(v ?? '')}>
             <SelectTrigger className="text-xs h-8">
-              <SelectValue placeholder="Service…" />
+              <span className="flex flex-1 text-left truncate">
+                {serviceId ? serviceMap.get(serviceId) ?? serviceId : <span className="text-gray-400">Service…</span>}
+              </span>
             </SelectTrigger>
             <SelectContent>
               {services.map((s) => (
@@ -143,7 +163,7 @@ export default function TravailleurEditForm({
         {state?.error && (
           <p className="text-xs text-red-600 bg-red-50 p-2 rounded-md">{state.error}</p>
         )}
-        {state?.success && (
+        {showSuccess && (
           <p className="text-xs text-green-600 bg-green-50 p-2 rounded-md">
             ✓ Données enregistrées avec succès.
           </p>

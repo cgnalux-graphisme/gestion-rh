@@ -7,6 +7,7 @@ import { formatMinutes } from '@/lib/horaires/utils'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { useState, useEffect, useRef } from 'react'
 
 function SubmitButton() {
   const { pending } = useFormStatus()
@@ -31,6 +32,18 @@ export default function PotHeuresAdminSection({
   potHeures: PotHeures | null
 }) {
   const [state, action] = useFormState(correcterPotHeuresAction, null)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const prevSuccess = useRef(state?.success)
+
+  useEffect(() => {
+    if (state?.success && !prevSuccess.current) {
+      setShowSuccess(true)
+      const timer = setTimeout(() => setShowSuccess(false), 3000)
+      return () => clearTimeout(timer)
+    }
+    prevSuccess.current = state?.success
+  }, [state?.success])
+
   const annee = new Date().getFullYear()
   const solde = potHeures?.solde_minutes ?? 0
   const isPositif = solde >= 0
@@ -92,10 +105,22 @@ export default function PotHeuresAdminSection({
             </p>
           </div>
 
+          <div className="space-y-1 max-w-xs">
+            <Label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
+              Commentaire (motif)
+            </Label>
+            <Input
+              name="commentaire_admin"
+              type="text"
+              placeholder="ex: Erreur de calcul semaine 12"
+              className="text-xs h-8"
+            />
+          </div>
+
           {state?.error && (
             <p className="text-xs text-red-600 bg-red-50 p-2 rounded-md">{state.error}</p>
           )}
-          {state?.success && (
+          {showSuccess && (
             <p className="text-xs text-green-600 bg-green-50 p-2 rounded-md">
               ✓ Correction appliquée avec succès.
             </p>

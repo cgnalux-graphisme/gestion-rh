@@ -4,10 +4,31 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  html {
+    font-size: 16px;
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+}
+
+/* Hazard tape border for anomaly cells */
+.hazard-tape {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    #f59e0b 0px,
+    #f59e0b 4px,
+    #1a1a1a 4px,
+    #1a1a1a 8px
+  );
+  padding: 2px;
+}
+.hazard-tape > * {
+  border-radius: 3px;
 }
 
 @layer base {

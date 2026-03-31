@@ -51,8 +51,10 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Vérifier is_active
-  if (user && !isAuthRoute) {
+  // Vérifier is_active (uniquement sur les navigations de page, pas les requêtes fetch/RSC)
+  // Cela évite une requête DB sur chaque sous-requête Next.js
+  const isPageNavigation = request.headers.get('accept')?.includes('text/html')
+  if (user && !isAuthRoute && isPageNavigation) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('is_active')

@@ -65,6 +65,7 @@ export async function sendCongeDecisionEmail(params: {
   date_debut: string
   date_fin: string
   nb_jours: number
+  demi_journee?: string | null
   commentaire_admin?: string
 }) {
   const FROM = process.env.RESEND_FROM!
@@ -75,6 +76,7 @@ export async function sendCongeDecisionEmail(params: {
     date_debut: params.date_debut,
     date_fin: params.date_fin,
     nb_jours: params.nb_jours,
+    demi_journee: params.demi_journee,
     commentaire_admin: params.commentaire_admin,
     appUrl: APP_URL,
   }

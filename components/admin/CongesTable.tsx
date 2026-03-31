@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { Conge, Profile } from '@/types/database'
-import { formatDateFr, labelTypeConge, labelStatutConge } from '@/lib/utils/dates'
-import CongeApprovalModal from '@/components/admin/CongeApprovalModal'
+import { formatDateFr, labelTypeConge, labelStatutConge, formatNbJours, labelDemiJournee } from '@/lib/utils/dates'
+import CongeApprovalDrawer from '@/components/admin/CongeApprovalDrawer'
 
 type CongeWithProfile = Conge & { profile: Pick<Profile, 'prenom' | 'nom' | 'email'> }
 
@@ -98,9 +98,12 @@ export default function CongesTable({ initialConges }: Props) {
                   </td>
                   <td className="px-3 py-2 text-gray-600">{labelTypeConge(c.type)}</td>
                   <td className="px-3 py-2 text-gray-600">
-                    {formatDateFr(c.date_debut)} → {formatDateFr(c.date_fin)}
+                    {c.demi_journee
+                      ? <>{formatDateFr(c.date_debut)} ({labelDemiJournee(c.demi_journee)})</>
+                      : <>{formatDateFr(c.date_debut)} → {formatDateFr(c.date_fin)}</>
+                    }
                   </td>
-                  <td className="px-3 py-2 text-center font-bold text-[#1a2332]">{c.nb_jours}</td>
+                  <td className="px-3 py-2 text-center font-bold text-[#1a2332]">{formatNbJours(c.nb_jours)}</td>
                   <td className="px-3 py-2 text-center">
                     <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${STATUT_STYLE[c.statut]}`}>
                       {labelStatutConge(c.statut)}
@@ -123,9 +126,9 @@ export default function CongesTable({ initialConges }: Props) {
         )}
       </div>
 
-      {/* Modal approbation */}
+      {/* Drawer approbation enrichi */}
       {selectedConge && (
-        <CongeApprovalModal
+        <CongeApprovalDrawer
           conge={selectedConge}
           open={true}
           onClose={() => setSelectedConge(null)}

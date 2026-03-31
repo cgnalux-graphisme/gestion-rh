@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 const TYPE_OPTIONS = [
   { value: 'conge_annuel', label: 'Congé annuel' },
   { value: 'repos_comp', label: 'Repos compensatoire' },
-  { value: 'maladie', label: 'Maladie' },
+  { value: 'recuperation', label: 'Récupération (heures sup.)' },
   { value: 'autre', label: 'Autre' },
 ]
 
@@ -23,10 +23,17 @@ export default function DemandeCongeForm({ onSuccess }: Props) {
   const [type, setType] = useState('conge_annuel')
   const [dateDebut, setDateDebut] = useState('')
   const [dateFin, setDateFin] = useState('')
+  const [demiJournee, setDemiJournee] = useState<'' | 'matin' | 'apres_midi'>('')
 
-  const nbJours = dateDebut && dateFin && dateFin >= dateDebut
-    ? calcJoursOuvrables(dateDebut, dateFin)
-    : 0
+  const isRecup = type === 'recuperation'
+  const isSingleDay = dateDebut && dateFin && dateDebut === dateFin
+
+  const nbJoursComplets = isRecup
+    ? (dateDebut ? 1 : 0)
+    : (dateDebut && dateFin && dateFin >= dateDebut ? calcJoursOuvrables(dateDebut, dateFin) : 0)
+
+  // Demi-journée uniquement si jour unique et pas récup
+  const nbJours = (!isRecup && isSingleDay && demiJournee) ? 0.5 : nbJoursComplets
 
   // Réinitialiser + notifier parent si succès
   if (state?.success && onSuccess) {
@@ -36,7 +43,6 @@ export default function DemandeCongeForm({ onSuccess }: Props) {
   return (
     <form
       action={formAction}
-      encType="multipart/form-data"
       className="space-y-4"
     >
       {/* Type */}
@@ -45,7 +51,7 @@ export default function DemandeCongeForm({ onSuccess }: Props) {
         <select
           name="type"
           value={type}
-          onChange={(e) => setType(e.target.value)}
+          onChange={(e) => { setType(e.target.value); setDateFin(''); setDemiJournee('') }}
           className="w-full text-[12px] border border-gray-200 rounded-lg px-3 py-2 bg-white text-[#1a2332] focus:outline-none focus:ring-2 focus:ring-[#e53e3e]/30"
           required
         >
@@ -56,67 +62,112 @@ export default function DemandeCongeForm({ onSuccess }: Props) {
       </div>
 
       {/* Dates */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-[11px] font-semibold text-gray-600 mb-1">Date de début *</label>
-          <input
-            type="date"
-            name="date_debut"
-            value={dateDebut}
-            onChange={(e) => setDateDebut(e.target.value)}
-            className="w-full text-[12px] border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#e53e3e]/30"
-            required
-          />
+      {isRecup ? (
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-[11px] font-semibold text-gray-600 mb-1">Date *</label>
+            <input
+              type="date"
+              name="date_debut"
+              value={dateDebut}
+              onChange={(e) => { setDateDebut(e.target.value); setDateFin(e.target.value) }}
+              className="w-full text-[12px] border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#e53e3e]/30"
+              required
+            />
+            {/* date_fin = date_debut pour récup */}
+            <input type="hidden" name="date_fin" value={dateDebut} />
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold text-gray-600 mb-1">Durée à récupérer *</label>
+            <div className="flex gap-2">
+              <div className="flex-1 relative">
+                <input
+                  type="number"
+                  name="recup_heures"
+                  min="0"
+                  max="8"
+                  defaultValue="0"
+                  className="w-full text-[12px] border border-gray-200 rounded-lg px-3 py-2 pr-7 focus:outline-none focus:ring-2 focus:ring-[#e53e3e]/30"
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">h</span>
+              </div>
+              <div className="flex-1 relative">
+                <input
+                  type="number"
+                  name="recup_minutes"
+                  min="0"
+                  max="59"
+                  step="15"
+                  defaultValue="0"
+                  className="w-full text-[12px] border border-gray-200 rounded-lg px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-[#e53e3e]/30"
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">min</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div>
-          <label className="block text-[11px] font-semibold text-gray-600 mb-1">Date de fin *</label>
-          <input
-            type="date"
-            name="date_fin"
-            value={dateFin}
-            onChange={(e) => setDateFin(e.target.value)}
-            min={dateDebut}
-            className="w-full text-[12px] border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#e53e3e]/30"
-            required
-          />
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-[11px] font-semibold text-gray-600 mb-1">Date de début *</label>
+            <input
+              type="date"
+              name="date_debut"
+              value={dateDebut}
+              onChange={(e) => { setDateDebut(e.target.value); setDemiJournee('') }}
+              className="w-full text-[12px] border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#e53e3e]/30"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold text-gray-600 mb-1">Date de fin *</label>
+            <input
+              type="date"
+              name="date_fin"
+              value={dateFin}
+              onChange={(e) => { setDateFin(e.target.value); setDemiJournee('') }}
+              min={dateDebut}
+              className="w-full text-[12px] border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#e53e3e]/30"
+              required
+            />
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Demi-journée (uniquement si jour unique et pas récup) */}
+      {!isRecup && isSingleDay && nbJoursComplets === 1 && (
+        <div>
+          <label className="block text-[11px] font-semibold text-gray-600 mb-1">Durée</label>
+          <div className="flex gap-2">
+            {[
+              { value: '', label: 'Journée complète' },
+              { value: 'matin', label: 'Matin (½ journée)' },
+              { value: 'apres_midi', label: 'Après-midi (½ journée)' },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setDemiJournee(opt.value as '' | 'matin' | 'apres_midi')}
+                className={`flex-1 text-[11px] py-1.5 px-2 rounded-lg border transition-colors ${
+                  demiJournee === opt.value
+                    ? 'bg-[#e53e3e] text-white border-[#e53e3e]'
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <input type="hidden" name="demi_journee" value={demiJournee} />
+        </div>
+      )}
 
       {/* Nb jours calculé */}
-      {nbJours > 0 && (
+      {nbJours > 0 && !isRecup && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-[11px] text-blue-700 font-semibold">
-          📅 {nbJours} jour{nbJours > 1 ? 's' : ''} ouvrable{nbJours > 1 ? 's' : ''}
-        </div>
-      )}
-
-      {/* Pièce jointe — obligatoire si maladie */}
-      {type === 'maladie' && (
-        <div>
-          <label className="block text-[11px] font-semibold text-gray-600 mb-1">
-            Certificat médical <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="file"
-            name="piece_jointe"
-            accept=".pdf,.jpg,.jpeg,.png"
-            required
-            className="w-full text-[11px] text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-[11px] file:font-semibold file:bg-gray-100 file:text-gray-600 hover:file:bg-gray-200"
-          />
-          <p className="text-[10px] text-gray-400 mt-1">PDF, JPG ou PNG — max 5 MB</p>
-        </div>
-      )}
-
-      {type !== 'maladie' && (
-        <div>
-          <label className="block text-[11px] font-semibold text-gray-600 mb-1">
-            Pièce jointe (optionnel)
-          </label>
-          <input
-            type="file"
-            name="piece_jointe"
-            accept=".pdf,.jpg,.jpeg,.png"
-            className="w-full text-[11px] text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-[11px] file:font-semibold file:bg-gray-100 file:text-gray-600 hover:file:bg-gray-200"
-          />
+          {nbJours === 0.5
+            ? `📅 ½ journée (${demiJournee === 'matin' ? 'matin' : 'après-midi'})`
+            : `📅 ${nbJours} jour${nbJours > 1 ? 's' : ''} ouvrable${nbJours > 1 ? 's' : ''}`}
         </div>
       )}
 

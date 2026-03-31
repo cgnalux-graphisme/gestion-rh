@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { joursFeriesPlage } from '@/lib/calendrier/joursFeries'
 import { calculerPlage } from './periodes'
+import { formatLocalDate } from '@/lib/utils/dates'
 import type { PeriodeType, StatsData } from '@/types/rapports'
 
 const ABSENCE_MAP: Record<string, { label: string; couleur: string }> = {
@@ -88,7 +89,7 @@ export async function getStatsData(params: Params): Promise<StatsData> {
   const end = new Date(dateFin + 'T00:00:00')
   while (cur <= end) {
     const dow = cur.getDay()
-    const iso = cur.toISOString().slice(0, 10)
+    const iso = formatLocalDate(cur)
     if (dow >= 1 && dow <= 5 && !feries.has(iso)) {
       joursOuvrablesList.push(iso)
     }

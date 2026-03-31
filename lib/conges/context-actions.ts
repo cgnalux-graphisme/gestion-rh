@@ -183,9 +183,12 @@ async function getWorkerSoldes(
 
 type CoverageResult = {
   coverage: DayCoverage[]
-  dayStatusMap: Map<string, Map<string, string>> // date → userId → status
+  dayStatusMap: Map<string, Map<string, string>> // date → userId → status (from approved congés, not day_statuses)
   regimeMap: Map<string, RegimeTravail>          // userId → latest regime
 }
+
+// NOTE: For future dates, workers are considered PRESENT BY DEFAULT per their schedule.
+// Absences are derived from approved congés (not day_statuses, which are filled by daily clock-ins).
 
 async function getCoverage(
   admin: SupabaseClient,
@@ -199,7 +202,7 @@ async function getCoverage(
   }
 
   // Determine which weekdays (1-5) we need
-  const neededWeekdays = [...new Set(joursOuvrables.map(d => safeDayOfWeek(d)))]
+  const neededWeekdays = Array.from(new Set(joursOuvrables.map(d => safeDayOfWeek(d))))
 
   // Batch 1: Requester's bureau schedule for needed weekdays
   const { data: requesterSchedules } = await admin
@@ -224,7 +227,7 @@ async function getCoverage(
     weekdayBureauMap.set(s.jour, { bureauId: s.bureau_id, bureauNom: s.bureau.nom })
   }
 
-  const bureauIds = [...new Set(schedules.map(s => s.bureau_id))]
+  const bureauIds = Array.from(new Set(schedules.map(s => s.bureau_id)))
 
   // Batch 2: All workers assigned to those bureaus on those weekdays (with profile)
   const { data: allBureauWorkers } = await admin
@@ -233,7 +236,7 @@ async function getCoverage(
     .in('bureau_id', bureauIds)
     .in('jour', neededWeekdays)
 
-  const bureauWorkers = (allBureauWorkers ?? []) as Array<{
+  const bureauWorkers = (allBureauWorkers ?? []) as unknown as Array<{
     user_id: string
     bureau_id: string
     jour: number
@@ -241,25 +244,36 @@ async function getCoverage(
   }>
 
   // Collect all worker IDs
-  const allWorkerIds = [...new Set(bureauWorkers.map(w => w.user_id))]
+  const allWorkerIds = Array.from(new Set(bureauWorkers.map(w => w.user_id)))
 
   if (allWorkerIds.length === 0) {
     return { coverage: [], dayStatusMap: new Map(), regimeMap: new Map() }
   }
 
-  // Batch 3: All day_statuses for those workers in the date range
-  const { data: dayStatuses } = await admin
-    .from('day_statuses')
-    .select('user_id, date, status')
+  // Batch 3: For FUTURE dates, day_statuses won't have entries yet (populated by daily clock-ins).
+  // Instead, query approved congés that overlap the date range to determine who will be absent.
+  // Workers are considered PRESENT BY DEFAULT per their schedule, unless they have an approved leave.
+  const { data: approvedConges } = await admin
+    .from('conges')
+    .select('user_id, type, date_debut, date_fin, statut')
     .in('user_id', allWorkerIds)
-    .gte('date', dateDebut)
-    .lte('date', dateFin)
+    .eq('statut', 'approuve')
+    .lte('date_debut', dateFin)
+    .gte('date_fin', dateDebut)
 
-  // Build dayStatusMap: date → userId → status
+  // Build absenceMap: date → userId → status code
+  // C = congé approuvé, M = maladie approuvée
   const dayStatusMap = new Map<string, Map<string, string>>()
-  for (const ds of (dayStatuses ?? [])) {
-    if (!dayStatusMap.has(ds.date)) dayStatusMap.set(ds.date, new Map())
-    dayStatusMap.get(ds.date)!.set(ds.user_id, ds.status)
+  for (const c of (approvedConges ?? [])) {
+    // Get all workdays of this approved leave that fall within our range
+    const leaveStart = c.date_debut > dateDebut ? c.date_debut : dateDebut
+    const leaveEnd = c.date_fin < dateFin ? c.date_fin : dateFin
+    const leaveDays = getJoursOuvrables(leaveStart, leaveEnd)
+    const statusCode = c.type === 'maladie' ? 'M' : 'C'
+    for (const d of leaveDays) {
+      if (!dayStatusMap.has(d)) dayStatusMap.set(d, new Map())
+      dayStatusMap.get(d)!.set(c.user_id, statusCode)
+    }
   }
 
   // Batch 4: All regime_travail for those workers (filter by date range)
@@ -366,8 +380,8 @@ async function getAvailability(
   if (alertDays.length === 0) return []
 
   // Collect bureau IDs to exclude and weekdays needed
-  const alertBureauIds = [...new Set(alertDays.map(d => d.bureauId))]
-  const alertWeekdays = [...new Set(alertDays.map(d => safeDayOfWeek(d.date)))]
+  const alertBureauIds = Array.from(new Set(alertDays.map(d => d.bureauId)))
+  const alertWeekdays = Array.from(new Set(alertDays.map(d => safeDayOfWeek(d.date))))
   const dateRange = {
     min: alertDays.reduce((a, b) => a.date < b.date ? a : b).date,
     max: alertDays.reduce((a, b) => a.date > b.date ? a : b).date,
@@ -379,15 +393,13 @@ async function getAvailability(
     .select('user_id, bureau_id, jour, profile:profiles!user_id(prenom, nom), bureau:bureaux!bureau_id(nom)')
     .in('jour', alertWeekdays)
 
-  const candidates = (otherWorkers ?? []).filter(
-    (w: { bureau_id: string }) => !alertBureauIds.includes(w.bureau_id)
-  ) as Array<{
+  const candidates = ((otherWorkers ?? []) as unknown as Array<{
     user_id: string
     bureau_id: string
     jour: number
     profile: { prenom: string; nom: string }
     bureau: { nom: string }
-  }>
+  }>).filter(w => !alertBureauIds.includes(w.bureau_id))
 
   if (candidates.length === 0) return alertDays.map(d => ({
     date: d.date,
@@ -396,23 +408,24 @@ async function getAvailability(
     availableWorkers: [],
   }))
 
-  // Collect candidate user IDs not yet in dayStatusMap
-  const candidateIds = [...new Set(candidates.map(c => c.user_id))]
+  // Collect candidate user IDs not yet in dayStatusMap/regimeMap
+  const candidateIds = Array.from(new Set(candidates.map(c => c.user_id)))
   const existingIds = new Set<string>()
-  for (const [, userMap] of dayStatusMap) {
-    for (const uid of userMap.keys()) existingIds.add(uid)
-  }
+  dayStatusMap.forEach((userMap) => {
+    userMap.forEach((_, uid) => existingIds.add(uid))
+  })
   const missingIds = candidateIds.filter(id => !existingIds.has(id))
 
-  // Fetch missing day_statuses + regimes
+  // Fetch missing approved congés + regimes for candidates
   if (missingIds.length > 0) {
-    const [{ data: extraStatuses }, { data: extraRegimes }] = await Promise.all([
+    const [{ data: extraConges }, { data: extraRegimes }] = await Promise.all([
       admin
-        .from('day_statuses')
-        .select('user_id, date, status')
+        .from('conges')
+        .select('user_id, type, date_debut, date_fin, statut')
         .in('user_id', missingIds)
-        .gte('date', dateRange.min)
-        .lte('date', dateRange.max),
+        .eq('statut', 'approuve')
+        .lte('date_debut', dateRange.max)
+        .gte('date_fin', dateRange.min),
       admin
         .from('regime_travail')
         .select('*')
@@ -422,9 +435,16 @@ async function getAvailability(
         .order('date_debut', { ascending: false }),
     ])
 
-    for (const ds of (extraStatuses ?? [])) {
-      if (!dayStatusMap.has(ds.date)) dayStatusMap.set(ds.date, new Map())
-      dayStatusMap.get(ds.date)!.set(ds.user_id, ds.status)
+    // Build absence entries from approved congés
+    for (const c of (extraConges ?? [])) {
+      const leaveStart = c.date_debut > dateRange.min ? c.date_debut : dateRange.min
+      const leaveEnd = c.date_fin < dateRange.max ? c.date_fin : dateRange.max
+      const leaveDays = getJoursOuvrables(leaveStart, leaveEnd)
+      const statusCode = c.type === 'maladie' ? 'M' : 'C'
+      for (const d of leaveDays) {
+        if (!dayStatusMap.has(d)) dayStatusMap.set(d, new Map())
+        dayStatusMap.get(d)!.set(c.user_id, statusCode)
+      }
     }
 
     for (const r of (extraRegimes ?? []) as RegimeTravail[]) {

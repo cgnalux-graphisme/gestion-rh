@@ -13,7 +13,7 @@ function SubmitButton() {
     <Button
       type="submit"
       disabled={pending}
-      className="w-full bg-[#e53e3e] hover:bg-[#c53030] text-white font-bold"
+      className="w-full bg-[#e53e3e] hover:bg-[#c53030] text-white font-bold text-base h-11"
     >
       {pending ? 'Connexion en cours…' : 'Se connecter'}
     </Button>
@@ -26,10 +26,10 @@ export default function LoginForm() {
   return (
     <form
       action={action}
-      className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm space-y-4"
+      className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm space-y-5"
     >
-      <div className="space-y-1.5">
-        <Label htmlFor="email" className="text-xs font-semibold text-gray-600">
+      <div className="space-y-2">
+        <Label htmlFor="email" className="text-sm font-semibold text-gray-600">
           Adresse email
         </Label>
         <Input
@@ -38,12 +38,12 @@ export default function LoginForm() {
           type="email"
           required
           placeholder="marie.v@accg-nalux.be"
-          className="h-9 text-sm"
+          className="h-11 text-base"
         />
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="password" className="text-xs font-semibold text-gray-600">
+      <div className="space-y-2">
+        <Label htmlFor="password" className="text-sm font-semibold text-gray-600">
           Mot de passe
         </Label>
         <Input
@@ -51,12 +51,12 @@ export default function LoginForm() {
           name="password"
           type="password"
           required
-          className="h-9 text-sm"
+          className="h-11 text-base"
         />
       </div>
 
       {state?.error && (
-        <p className="text-xs text-red-600 bg-red-50 p-2 rounded-md">{state.error}</p>
+        <p className="text-sm text-red-600 bg-red-50 p-3 rounded-md">{state.error}</p>
       )}
 
       <SubmitButton />
@@ -64,7 +64,7 @@ export default function LoginForm() {
       <div className="text-center pt-1">
         <Link
           href="/forgot-password"
-          className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+          className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
         >
           Mot de passe oublié ?
         </Link>

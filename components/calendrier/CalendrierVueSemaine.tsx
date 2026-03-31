@@ -1,6 +1,7 @@
 import React from 'react'
 import type { TravailleurCalendrier } from '@/types/calendrier'
 import StatutCell from './StatutCell'
+import { formatLocalDate } from '@/lib/utils/dates'
 
 const JOURS_COURTS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 
@@ -24,7 +25,7 @@ export default function CalendrierVueSemaine({ travailleurs, dateDebut }: Props)
   const [y, m, d] = dateDebut.split('-').map(Number)
   for (let i = 0; i < 7; i++) {
     const dt = new Date(Date.UTC(y, m - 1, d + i))
-    dates.push(dt.toISOString().slice(0, 10))
+    dates.push(formatLocalDate(dt))
   }
 
   // Grouper par service
@@ -71,7 +72,7 @@ export default function CalendrierVueSemaine({ travailleurs, dateDebut }: Props)
                   </td>
                   {t.jours.map((jour) => (
                     <td key={jour.date} className="px-1 py-1.5 text-center">
-                      <StatutCell statut={jour.statut} label={jour.label} size="md" />
+                      <StatutCell statut={jour.statut} label={jour.label} size="md" indicateurs={jour.indicateurs} />
                     </td>
                   ))}
                 </tr>

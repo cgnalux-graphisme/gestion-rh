@@ -2,15 +2,17 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getCalendrierData } from '@/lib/calendrier/getCalendrierData'
 import CalendrierFiltres from '@/components/calendrier/CalendrierFiltres'
-import CalendrierVueSemaine from '@/components/calendrier/CalendrierVueSemaine'
-import CalendrierVueMois from '@/components/calendrier/CalendrierVueMois'
+import CalendrierAdminWrapper from '@/components/calendrier/CalendrierAdminWrapper'
+import CorrectionsEnAttenteWidget from '@/components/admin/CorrectionsEnAttenteWidget'
+import { getCorrectionsEnAttenteAdmin } from '@/lib/pointage/correction-actions'
+import { formatLocalDate } from '@/lib/utils/dates'
 
 function getLundiSemaine(d: Date): string {
   const dow = d.getDay()
   const diff = dow === 0 ? -6 : 1 - dow
   const lundi = new Date(d)
   lundi.setDate(d.getDate() + diff)
-  return lundi.toISOString().slice(0, 10)
+  return formatLocalDate(lundi)
 }
 
 function getPremierDuMois(d: Date): string {
@@ -60,13 +62,15 @@ export default async function AdminCalendrierPage({
     dateDebut = getLundiSemaine(new Date(date))
     const fin = new Date(dateDebut)
     fin.setDate(fin.getDate() + 6)
-    dateFin = fin.toISOString().slice(0, 10)
+    dateFin = formatLocalDate(fin)
   } else {
     const d = new Date(date)
     dateDebut = getPremierDuMois(d)
     const nbJours = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
     dateFin = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(nbJours).padStart(2, '0')}`
   }
+
+  const correctionsPromise = getCorrectionsEnAttenteAdmin()
 
   const { travailleurs, services, bureaux } = await getCalendrierData({
     dateDebut,
@@ -75,9 +79,15 @@ export default async function AdminCalendrierPage({
     bureauId,
   })
 
+  const corrections = await correctionsPromise
+
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      <h1 className="text-sm font-bold text-[#1a2332] mb-4">📅 Calendrier de présence</h1>
+      <h1 className="text-sm font-bold text-[#1a2332] mb-4">📅 Calendrier RH</h1>
+      <p className="text-[10px] text-gray-400 -mt-3 mb-4">
+        Cliquez sur une cellule pour modifier le statut d&apos;un travailleur.
+      </p>
+      <CorrectionsEnAttenteWidget corrections={corrections} />
       <CalendrierFiltres
         vue={vue}
         date={dateDebut}
@@ -86,11 +96,13 @@ export default async function AdminCalendrierPage({
         services={services}
         bureaux={bureaux}
       />
-      {vue === 'semaine' ? (
-        <CalendrierVueSemaine travailleurs={travailleurs} dateDebut={dateDebut} />
-      ) : (
-        <CalendrierVueMois travailleurs={travailleurs} dateDebut={dateDebut} />
-      )}
+      <CalendrierAdminWrapper
+        vue={vue}
+        travailleurs={travailleurs}
+        dateDebut={dateDebut}
+        bureaux={bureaux}
+        pendingCorrections={corrections.map((c) => `${c.user_id}:${c.date}`)}
+      />
     </div>
   )
 }

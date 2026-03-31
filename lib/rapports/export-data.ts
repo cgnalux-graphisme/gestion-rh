@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { calculerPlage, labelPeriode } from './periodes'
 import { joursFeriesPlage } from '@/lib/calendrier/joursFeries'
 import { formatMinutes } from '@/lib/horaires/utils'
-import { labelTypeConge, labelStatutConge, formatDateFr } from '@/lib/utils/dates'
+import { labelTypeConge, labelStatutConge, formatDateFr, formatLocalDate } from '@/lib/utils/dates'
 import type { ExportParams } from '@/types/rapports'
 
 export type ExportMeta = {
@@ -60,7 +60,7 @@ async function filterByBureau(
   const end = new Date(dateFin + 'T00:00:00')
   while (cur <= end) {
     const dow = cur.getDay()
-    const iso = cur.toISOString().slice(0, 10)
+    const iso = formatLocalDate(cur)
     if (dow >= 1 && dow <= 5 && !feries.has(iso)) {
       for (const uid of userIds) {
         const byJour = bureauIndex.get(uid)
@@ -84,7 +84,7 @@ export async function collectPointages(params: ExportParams): Promise<ExportMeta
   const cur = new Date(dateDebut + 'T00:00:00')
   const end = new Date(dateFin + 'T00:00:00')
   while (cur <= end) {
-    dates.push(cur.toISOString().slice(0, 10))
+    dates.push(formatLocalDate(cur))
     cur.setDate(cur.getDate() + 1)
   }
 
@@ -275,7 +275,7 @@ export async function collectCalendrier(params: ExportParams): Promise<ExportMet
   const cur = new Date(dateDebut + 'T00:00:00')
   const end = new Date(dateFin + 'T00:00:00')
   while (cur <= end) {
-    dates.push(cur.toISOString().slice(0, 10))
+    dates.push(formatLocalDate(cur))
     cur.setDate(cur.getDate() + 1)
   }
 

@@ -1,7 +1,7 @@
 import {
   Html, Head, Body, Container, Heading, Text, Button, Section, Hr,
 } from '@react-email/components'
-import { formatDateFr, labelTypeConge } from '@/lib/utils/dates'
+import { formatDateFr, labelTypeConge, formatNbJours, labelDemiJournee } from '@/lib/utils/dates'
 
 interface Props {
   prenom: string
@@ -9,12 +9,13 @@ interface Props {
   date_debut: string
   date_fin: string
   nb_jours: number
+  demi_journee?: string | null
   commentaire_admin?: string
   appUrl: string
 }
 
 export default function CongeApprouveEmail({
-  prenom, type, date_debut, date_fin, nb_jours, commentaire_admin, appUrl,
+  prenom, type, date_debut, date_fin, nb_jours, demi_journee, commentaire_admin, appUrl,
 }: Props) {
   return (
     <Html lang="fr">
@@ -39,10 +40,13 @@ export default function CongeApprouveEmail({
 
           <Section style={{ background: '#f0fdf4', borderRadius: 8, padding: '16px 20px', margin: '20px 0', border: '1px solid #bbf7d0' }}>
             <Text style={{ margin: 0, color: '#166534', fontSize: 14 }}>
-              <strong>Du</strong> {formatDateFr(date_debut)} <strong>au</strong> {formatDateFr(date_fin)}
+              {demi_journee
+                ? <><strong>Le</strong> {formatDateFr(date_debut)} ({labelDemiJournee(demi_journee)})</>
+                : <><strong>Du</strong> {formatDateFr(date_debut)} <strong>au</strong> {formatDateFr(date_fin)}</>
+              }
             </Text>
             <Text style={{ margin: '6px 0 0', color: '#166534', fontSize: 14 }}>
-              <strong>{nb_jours} jour{nb_jours > 1 ? 's' : ''} ouvrable{nb_jours > 1 ? 's' : ''}</strong>
+              <strong>{formatNbJours(nb_jours)} jour{nb_jours > 1 ? 's' : ''} ouvrable{nb_jours > 1 ? 's' : ''}</strong>
             </Text>
           </Section>
 

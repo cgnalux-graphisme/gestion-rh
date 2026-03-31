@@ -101,6 +101,7 @@ export type Pointage = {
   midi_out: string | null
   midi_in: string | null
   depart: string | null
+  corrections_appliquees: Record<string, boolean>  // {"arrivee": true, ...}
   created_at: string
 }
 
@@ -123,8 +124,10 @@ export type PotHeures = {
 }
 
 export type TypeConge = 'conge_annuel' | 'repos_comp' | 'recuperation' | 'maladie' | 'autre'
-export type StatutConge = 'en_attente' | 'approuve' | 'refuse'
+export type StatutConge = 'en_attente' | 'approuve' | 'refuse' | 'annule'
 export type StatutDemandeHS = 'en_attente' | 'approuve' | 'refuse'
+
+export type DemiJournee = 'matin' | 'apres_midi'
 
 export type Conge = {
   id: string
@@ -132,16 +135,30 @@ export type Conge = {
   type: TypeConge
   date_debut: string    // 'YYYY-MM-DD'
   date_fin: string      // 'YYYY-MM-DD'
-  nb_jours: number
+  nb_jours: number      // supporte 0.5 pour les demi-journées
+  demi_journee: DemiJournee | null  // null = journée complète
   statut: StatutConge
   commentaire_travailleur: string | null
   commentaire_admin: string | null
+  recup_minutes: number | null
   piece_jointe_url: string | null
   approuve_par: string | null
   approuve_le: string | null
   created_at: string
   // joins optionnels
   profile?: Pick<Profile, 'prenom' | 'nom' | 'email'>
+}
+
+export type AnnulationConge = {
+  id: string
+  conge_id: string
+  user_id: string
+  motif: string
+  statut: 'en_attente' | 'approuve' | 'refuse'
+  commentaire_admin: string | null
+  traite_par: string | null
+  traite_le: string | null
+  created_at: string
 }
 
 export type DemandeHeuresSup = {
@@ -173,6 +190,9 @@ export type CorrectionPointage = {
   commentaire_admin: string | null
   traite_par: string | null
   traite_le: string | null
+  vu_par_travailleur: boolean
+  minutes_deduites: number | null
+  heure_corrigee: string | null  // 'HH:mm' effectivement appliquée
   created_at: string
   // joins optionnels
   profile?: Pick<Profile, 'prenom' | 'nom' | 'email'>

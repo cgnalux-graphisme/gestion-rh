@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { isApresDeadlineChangementOption } from '@/lib/horaires/utils'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 function SubmitButton() {
   const { pending } = useFormStatus()
@@ -32,6 +32,18 @@ function SubmitButton() {
 export default function OptionHoraireAdminSection({ profile }: { profile: Profile }) {
   const [state, action] = useFormState(updateOptionHoraireAction, null)
   const [option, setOption] = useState(profile.option_horaire ?? '')
+  const [showSuccess, setShowSuccess] = useState(false)
+  const prevSuccess = useRef(state?.success)
+
+  useEffect(() => {
+    if (state?.success && !prevSuccess.current) {
+      setShowSuccess(true)
+      const timer = setTimeout(() => setShowSuccess(false), 3000)
+      return () => clearTimeout(timer)
+    }
+    prevSuccess.current = state?.success
+  }, [state?.success])
+
   const apresDeadline = isApresDeadlineChangementOption()
   const anneeProchaine = new Date().getFullYear() + 1
 
@@ -104,6 +116,18 @@ export default function OptionHoraireAdminSection({ profile }: { profile: Profil
             <input type="hidden" name="option_horaire" value={option} />
           </div>
 
+          <div className="space-y-1">
+            <Label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
+              Commentaire (optionnel)
+            </Label>
+            <input
+              name="commentaire_admin"
+              type="text"
+              placeholder="ex: Demande du travailleur"
+              className="w-full text-xs border border-gray-200 rounded-lg px-3 py-1.5 h-8 max-w-xs focus:outline-none focus:ring-2 focus:ring-[#e53e3e]/30"
+            />
+          </div>
+
           {state?.error && (
             <p className="text-xs text-red-600 bg-red-50 p-2 rounded-md">{state.error}</p>
           )}
@@ -112,7 +136,7 @@ export default function OptionHoraireAdminSection({ profile }: { profile: Profil
               ⚠️ {state.warning}
             </p>
           )}
-          {state?.success && !state.warning && (
+          {showSuccess && !state?.warning && (
             <p className="text-xs text-green-600 bg-green-50 p-2 rounded-md">
               ✓ Option horaire mise à jour.
             </p>

@@ -72,7 +72,7 @@ export default function CalendrierVueMois({ travailleurs, dateDebut }: Props) {
                     </td>
                     {t.jours.map((jour) => (
                       <td key={jour.date} className="px-0.5 py-1 text-center">
-                        <StatutCell statut={jour.statut} label={jour.label} size="sm" />
+                        <StatutCell statut={jour.statut} label={jour.label} size="sm" indicateurs={jour.indicateurs} />
                       </td>
                     ))}
                   </tr>
