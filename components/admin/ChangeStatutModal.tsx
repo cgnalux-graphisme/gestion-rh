@@ -269,6 +269,10 @@ export default function ChangeStatutModal({
           setCorrMidiIn(d.pointage.midi_in ?? '')
           setCorrDepart(d.pointage.depart ?? '')
         })
+        .catch((err) => {
+          console.error('[ChangeStatutModal] getPointageDetail failed:', err)
+          setError('Erreur lors du chargement du pointage')
+        })
         .finally(() => setLoading(false))
     }
   }, [open, userId, date])

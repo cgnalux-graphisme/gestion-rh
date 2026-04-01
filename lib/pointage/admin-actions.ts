@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { DayStatusRecord, Pointage, RegimeTravail, OptionHoraire, HorairesHebdo, HorairesTravailHebdo } from '@/types/database'
 import { isEte, getHorairesJour } from '@/lib/horaires/utils'
-import { localTimeToIso } from '@/lib/utils/dates'
+import { localTimeToIso, formatTimeBrussels } from '@/lib/utils/dates'
 import { logAudit } from '@/lib/audit/logger'
 
 async function assertAdmin() {
@@ -310,10 +310,11 @@ export type PointageDetail = {
   correctionsAppliquees: Record<string, boolean>
 }
 
+/** Convertit un ISO timestamp → 'HH:mm' en heure belge, ou null si absent */
 function isoToHHmm(iso: string | null): string | null {
   if (!iso) return null
-  const d = new Date(iso)
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  const formatted = formatTimeBrussels(iso)
+  return formatted === '—' ? null : formatted
 }
 
 function hhmmToMinutes(hhmm: string): number {
@@ -357,6 +358,13 @@ export async function getPointageDetail(
     // Fetch parametres_options for both A and B
     admin.from('parametres_options').select('option_horaire, horaires, horaires_ete'),
   ])
+
+  // Log query errors for debugging
+  if (pointageRes.error) console.error('[getPointageDetail] pointage query error:', pointageRes.error)
+  if (dayStatusRes.error) console.error('[getPointageDetail] dayStatus query error:', dayStatusRes.error)
+  if (profileRes.error) console.error('[getPointageDetail] profile query error:', profileRes.error)
+  if (correctionsRes.error) console.error('[getPointageDetail] corrections query error:', correctionsRes.error)
+  if (paramOptRes.error) console.error('[getPointageDetail] paramOpt query error:', paramOptRes.error)
 
   const pointage = pointageRes.data as Pointage | null
   const dayStatus = dayStatusRes.data as DayStatusRecord | null
