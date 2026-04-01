@@ -65,16 +65,19 @@ export default function AffectationSection({
                     return <td key={day} className="text-center py-0.5" />
                   }
                   const horairesHebdo = ete ? bureau.horaires_ete : bureau.horaires_normaux
-                  const h = horairesHebdo?.[String(day) as keyof typeof horairesHebdo]
+                  const h = horairesHebdo?.[String(day) as keyof typeof horairesHebdo] as Record<string, unknown> | undefined
+                  if (!h) {
+                    return <td key={day} className="text-center py-0.5"><span className="text-gray-300 text-[9px]">—</span></td>
+                  }
+                  // Support deux formats de données : matin/aprem ou ouverture/fermeture
+                  const label = h.matin_debut
+                    ? `${h.matin_debut}–${h.matin_fin} / ${h.aprem_debut}–${h.aprem_fin}`
+                    : h.ouverture
+                      ? `${h.ouverture}–${h.fermeture}`
+                      : '—'
                   return (
                     <td key={day} className="text-center py-0.5">
-                      {h ? (
-                        <span className="text-[9px] text-gray-400">
-                          {h.matin_debut}–{h.matin_fin} / {h.aprem_debut}–{h.aprem_fin}
-                        </span>
-                      ) : (
-                        <span className="text-gray-300 text-[9px]">—</span>
-                      )}
+                      <span className="text-[9px] text-gray-400">{label}</span>
                     </td>
                   )
                 })}
